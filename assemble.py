@@ -33,10 +33,27 @@ CHEMIN_NAV = {      # data-path Stitch -> fichier publié
     "methode": "methode.html",
 }
 
-HEAD_INJECT = ('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">'
-               '</script>')
-FOOT_INJECT = ('<script src="assets/config.js"></script>'
-               '<script src="assets/app.js"></script>')
+HEAD_INJECT = (
+    '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>'
+    '<link rel="manifest" href="assets/manifest.webmanifest">'
+    '<meta name="theme-color" content="#0f131c">'
+    '<meta name="mobile-web-app-capable" content="yes">'
+    '<meta name="apple-mobile-web-app-capable" content="yes">'
+    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+    '<link rel="apple-touch-icon" href="assets/icons-192.png">'
+    '<link rel="icon" type="image/png" href="assets/icons-192.png">'
+    '<style>'
+    'html{background:#0a0e17;}'
+    '@media (min-width:640px){'
+    'body{max-width:560px;margin:0 auto;box-shadow:0 0 60px rgba(0,0,0,.6);}'
+    'header.fixed,nav.fixed{max-width:560px;left:50%;transform:translateX(-50%);}'
+    '}'
+    '</style>')
+FOOT_INJECT = (
+    '<script src="assets/config.js"></script>'
+    '<script src="assets/app.js"></script>'
+    '<script>if("serviceWorker" in navigator)window.addEventListener("load",function(){'
+    'navigator.serviceWorker.register("sw.js").catch(function(){});});</script>')
 
 
 def rewrit_nav(html, cle):
