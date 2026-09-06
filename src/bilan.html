@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'on-primary-container': '#005763', 'secondary': '#4ae176', 'secondary-container': '#00b954', 'tertiary-container': '#ffaba5', 'outline': '#859397', 'surface-variant': '#31353f', 'on-tertiary-fixed-variant': '#930013', 'surface-container-low': '#181b25', 'on-tertiary-container': '#a20016', 'surface': '#0f131c', 'on-secondary-container': '#004119', 'surface-container-high': '#262a34', 'surface-dim': '#0f131c', 'surface-container': '#1c1f29', 'primary-container': '#22d3ee', 'error': '#ffb4ab', 'on-surface-variant': '#bbc9cd', 'primary-fixed': '#a2eeff', 'on-tertiary-fixed': '#410004', 'on-secondary-fixed-variant': '#005321', 'inverse-primary': '#006877', 'on-secondary-fixed': '#002109', 'surface-container-lowest': '#0a0e17', 'secondary-fixed': '#6bff8f', 'tertiary': '#ffd2ce', 'surface-container-highest': '#31353f', 'on-primary-fixed-variant': '#004e5a', 'on-background': '#dfe2ef', 'tertiary-fixed-dim': '#ffb3ad', 'outline-variant': '#3c494c', 'primary': '#8aebff', 'background': '#0f131c', 'primary-fixed-dim': '#2fd9f4', 'inverse-on-surface': '#2c303a', 'error-container': '#93000a', 'secondary-fixed-dim': '#4ae176', 'on-secondary': '#003915', 'on-primary-fixed': '#001f25', 'on-tertiary': '#68000a', 'surface-tint': '#2fd9f4', 'tertiary-fixed': '#ffdad7', 'on-error': '#690005', 'on-primary': '#00363e', 'on-surface': '#dfe2ef', 'on-error-container': '#ffdad6', 'inverse-surface': '#dfe2ef', 'surface-bright': '#353943' }, borderRadius: { 'DEFAULT': '0.125rem', 'lg': '0.25rem', 'xl': '0.5rem', 'full': '0.75rem' }, spacing: { 'margin-screen': '1rem', 'gutter-xl': '1.5rem', 'gutter-xs': '0.25rem', 'nav-height': '4rem', 'gutter-md': '0.75rem', 'gutter-sm': '0.5rem', 'gutter-base': '1rem', 'gutter-lg': '1.25rem' }, fontFamily: { 'label-micro': ['Inter'], 'metric-sm': ['JetBrains Mono'], 'metric-xs': ['JetBrains Mono'], 'headline-sm': ['Inter'], 'headline-md': ['Inter'], 'metric-md': ['JetBrains Mono'], 'metric-lg': ['JetBrains Mono'], 'headline-lg': ['Inter'], 'body-md': ['Inter'], 'body-sm': ['Inter'], 'metric-display': ['JetBrains Mono'] }, fontSize: { 'label-micro': ['10px', { lineHeight: '12px', letterSpacing: '0.08em', fontWeight: '700' }], 'metric-sm': ['12px', { lineHeight: '16px', fontWeight: '500' }], 'metric-xs': ['11px', { lineHeight: '14px', fontWeight: '400' }], 'headline-sm': ['16px', { lineHeight: '24px', letterSpacing: '-0.01em', fontWeight: '600' }], 'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.01em', fontWeight: '600' }], 'metric-md': ['14px', { lineHeight: '20px', letterSpacing: '-0.01em', fontWeight: '500' }], 'metric-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.02em', fontWeight: '600' }], 'headline-lg': ['24px', { lineHeight: '32px', letterSpacing: '-0.02em', fontWeight: '700' }], 'body-md': ['14px', { lineHeight: '20px', fontWeight: '400' }], 'body-sm': ['13px', { lineHeight: '18px', fontWeight: '400' }], 'metric-display': ['28px', { lineHeight: '32px', letterSpacing: '-0.03em', fontWeight: '700' }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface-container-lowest text-on-surface antialiased flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-16 px-gutter-base flex items-center justify-between gap-gutter-sm"><div class="flex items-center gap-gutter-sm min-w-0"><img alt="PRONOS FOOT Monospace Terminal Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UndCJF3Z-ruOB1o0fl8Utg-dNTBZQHuWnzHqrMd_CgoP2PJGU1wOgZcVnpW2ows9Vnf7vm9MDoQnVy4FeaflQcvnUJNCRlMdG3dMRWuZFZMUPpGSbG3W_kgYDiF3wPUYnOR_Tc6fwsgAUOP91TQE2BqIWja9j_o5NM8QF7Bmj1ncegvAkq1sH9RgJWnxwWNwK6hXGq2P1C52pTfSV5s7-ZdPW3T03Qor81KRRfs1UmSeG0fHUqtjmvInI"/><div class="flex flex-col min-w-0"><span class="font-metric-sm text-metric-sm tracking-wider uppercase text-primary truncate">PRONOS FOOT</span><div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span><span class="font-metric-xs text-metric-xs text-on-surface-variant uppercase tracking-wider">LIVE TICKER · SYNC</span></div></div></div><div class="flex items-center gap-gutter-sm flex-shrink-0"><div class="hidden sm:flex flex-col items-end text-right"><span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">TERMINAL VIEW</span><span class="font-headline-sm text-headline-sm text-on-surface truncate">Bilan</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface-container-lowest min-h-screen"><div class="flex flex-col w-full px-margin-screen pb-gutter-xl gap-gutter-base">
+<!-- Header Card: Radical Transparency Ledger -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container p-gutter-base shadow-sm">
+<div class="flex items-center justify-between gap-gutter-sm mb-gutter-xs">
+<div class="flex items-center gap-1.5">
+<span class="inline-block w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-label-micro text-label-micro text-secondary tracking-widest uppercase">AUDIT PUBLIC EN TEMPS RÉEL</span>
+</div>
+<span class="font-metric-xs text-metric-xs text-on-surface-variant">SYNC H+1</span>
+</div>
+<h1 class="font-metric-lg text-metric-lg uppercase text-primary tracking-wide mb-1">
+      LE BILAN HONNÊTE
+    </h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-gutter-md">
+      Publié chaque heure, résultats officiels ESPN, rien n'est effacé ni réécrit.
+    </p>
+<!-- Verification Badge -->
+<div class="flex items-center gap-gutter-sm px-gutter-sm py-1.5 rounded-lg bg-surface-container-low text-primary-fixed">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-metric-xs text-metric-xs tracking-wider uppercase truncate">
+        VÉRIFIÉ WALK-FORWARD · AUCUN BIAIS DU SURVIVANT
+      </span>
+</div>
+</div>
+<!-- Interactive Transparency Micro-Toggle (Delight & Engagement) -->
+<div class="flex items-center justify-between px-gutter-sm py-2 rounded-lg bg-surface-container-low shadow-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">terminal</span>
+<span class="font-metric-xs text-metric-xs text-on-surface uppercase tracking-wider">FILTRE MATHÉMATIQUE</span>
+</div>
+<div class="flex items-center gap-1 bg-surface-container p-0.5 rounded">
+<button class="px-2 py-0.5 rounded font-metric-xs text-metric-xs bg-primary text-on-primary font-bold transition-colors" id="toggle-real">RÉEL (FLAT)</button>
+<button class="px-2 py-0.5 rounded font-metric-xs text-metric-xs text-on-surface-variant transition-colors hover:text-on-surface" id="toggle-kelly">KELLY 1/4</button>
+</div>
+</div>
+<!-- KPI Grid (2x2 Monospace Readouts) -->
+<div class="grid grid-cols-2 gap-gutter-sm">
+<!-- Card 1: Strike Rate -->
+<div class="flex flex-col justify-between p-gutter-base rounded-xl bg-surface-container shadow-sm min-h-[110px]">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">HIT RATE</span>
+<span class="material-symbols-outlined text-[15px] text-primary">precision_manufacturing</span>
+</div>
+<div>
+<div class="font-metric-display text-metric-display text-primary leading-none mb-1.5">78 %</div>
+<div class="font-metric-xs text-metric-xs text-on-surface-variant">sélections touchées (43/55)</div>
+</div>
+</div>
+<!-- Card 2: 30D Simulated ROI -->
+<div class="flex flex-col justify-between p-gutter-base rounded-xl bg-surface-container shadow-sm min-h-[110px]">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">ROI 30J</span>
+<span class="material-symbols-outlined text-[15px] text-secondary">trending_up</span>
+</div>
+<div>
+<div class="font-metric-display text-metric-display text-secondary leading-none mb-1.5">+2.1 u</div>
+<div class="font-metric-xs text-metric-xs text-on-surface-variant">ROI simulé sur 30 jours</div>
+</div>
+</div>
+<!-- Card 3: Backtest Reality Check -->
+<div class="flex flex-col justify-between p-gutter-base rounded-xl bg-surface-container shadow-sm min-h-[110px]">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-error uppercase tracking-wider">MARGE MARCHE</span>
+<span class="material-symbols-outlined text-[15px] text-error">warning</span>
+</div>
+<div>
+<div class="font-metric-display text-metric-display text-error leading-none mb-1.5">−8.8 %</div>
+<div class="font-metric-xs text-metric-xs text-on-surface-variant">ROI backtest (213 665 paris)</div>
+</div>
+</div>
+<!-- Card 4: Calibration Accuracy -->
+<div class="flex flex-col justify-between p-gutter-base rounded-xl bg-surface-container shadow-sm min-h-[110px]">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">CALIBRATION</span>
+<span class="material-symbols-outlined text-[15px] text-primary">tune</span>
+</div>
+<div>
+<div class="font-metric-lg text-metric-lg text-primary leading-none mb-1.5 pt-1">92 % → 92 %</div>
+<div class="font-metric-xs text-metric-xs text-on-surface-variant">annoncé → réalisé (isotonique)</div>
+</div>
+</div>
+</div>
+<!-- Monthly Bar Chart Card -->
+<div class="rounded-xl bg-surface-container p-gutter-base shadow-sm">
+<div class="flex items-center justify-between mb-gutter-sm">
+<div class="flex flex-col">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">HISTORIQUE RÉCENT</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Taux de réussite par mois</span>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded text-primary">
+<span class="material-symbols-outlined text-[14px]">query_stats</span>
+<span class="font-metric-xs text-metric-xs">Moy. 76.1%</span>
+</div>
+</div>
+<!-- Monospace Columns Chart -->
+<div class="grid grid-cols-6 gap-2 pt-4 pb-2 items-end h-44 border-none bg-surface-container-low/60 rounded-lg px-3">
+<!-- Oct -->
+<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
+<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">76%</span>
+<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[76%]">
+<div class="w-full bg-primary h-full transition-all duration-700"></div>
+</div>
+<span class="font-metric-xs text-metric-xs text-outline uppercase">Oct</span>
+</div>
+<!-- Nov -->
+<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
+<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">81%</span>
+<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[81%]">
+<div class="w-full bg-primary h-full transition-all duration-700"></div>
+</div>
+<span class="font-metric-xs text-metric-xs text-outline uppercase">Nov</span>
+</div>
+<!-- Déc -->
+<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
+<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">79%</span>
+<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[79%]">
+<div class="w-full bg-primary h-full transition-all duration-700"></div>
+</div>
+<span class="font-metric-xs text-metric-xs text-outline uppercase">Déc</span>
+</div>
+<!-- Jan: Honest Loss Month -->
+<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
+<div class="flex items-center justify-center px-1 py-0.2 rounded bg-error/20">
+<span class="font-metric-xs text-metric-xs text-error font-bold">64%</span>
+</div>
+<div class="w-full bg-error/20 rounded-t-sm overflow-hidden flex items-end h-[64%]">
+<div class="w-full bg-error h-full transition-all duration-700"></div>
+</div>
+<span class="font-metric-xs text-metric-xs text-error uppercase font-bold">Jan</span>
+</div>
+<!-- Fév -->
+<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
+<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">77%</span>
+<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[77%]">
+<div class="w-full bg-primary h-full transition-all duration-700"></div>
+</div>
+<span class="font-metric-xs text-metric-xs text-outline uppercase">Fév</span>
+</div>
+<!-- Mar -->
+<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
+<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">80%</span>
+<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[80%]">
+<div class="w-full bg-primary h-full transition-all duration-700"></div>
+</div>
+<span class="font-metric-xs text-metric-xs text-outline uppercase">Mar</span>
+</div>
+</div>
+<!-- Honest Disclaimer Caption -->
+<div class="flex items-center gap-2 mt-gutter-sm text-outline">
+<span class="material-symbols-outlined text-[16px] text-error">info</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant italic">
+        Le mois de janvier déficitaire est affiché sans filtre.
+      </span>
+</div>
+</div>
+<!-- Breakdown by Market with Precision Meters -->
+<div class="rounded-xl bg-surface-container p-gutter-base shadow-sm">
+<div class="flex items-center justify-between mb-gutter-sm">
+<div class="flex flex-col">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">DÉCOUPE SECTORIELLE</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Précision par marché</span>
+</div>
+<span class="font-metric-xs text-metric-xs text-outline tracking-tight">SÉLECTION PAR ODDS</span>
+</div>
+<div class="flex flex-col gap-gutter-md">
+<!-- Market 1: Under 2.5 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center font-metric-sm text-metric-sm">
+<span class="text-on-surface font-medium">Under 2.5</span>
+<span class="text-secondary font-bold">81 %</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 81%"></div>
+</div>
+</div>
+<!-- Market 2: Double chance -->
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center font-metric-sm text-metric-sm">
+<span class="text-on-surface font-medium">Double chance</span>
+<span class="text-secondary font-bold">88 %</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 88%"></div>
+</div>
+</div>
+<!-- Market 3: Over 2.5 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center font-metric-sm text-metric-sm">
+<span class="text-on-surface font-medium">Over 2.5</span>
+<span class="text-primary-fixed-dim font-bold">74 %</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-fixed-dim rounded-full" style="width: 74%"></div>
+</div>
+</div>
+<!-- Market 4: 1X2 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center font-metric-sm text-metric-sm">
+<span class="text-on-surface font-medium">1X2 (Victoire sèche)</span>
+<span class="text-tertiary font-bold">62 %</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 62%"></div>
+</div>
+</div>
+</div>
+<!-- Threshold Legend -->
+<div class="flex items-center justify-between pt-gutter-sm mt-gutter-sm border-t-0 bg-surface-container-low px-gutter-sm py-2 rounded-lg">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-metric-xs text-metric-xs text-on-surface-variant">Vert &gt; 75 %</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="font-metric-xs text-metric-xs text-on-surface-variant">Ambre &lt; 75 %</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-outline">verified_user</span>
+<span class="font-metric-xs text-metric-xs text-outline">Seuils Calibrés</span>
+</div>
+</div>
+</div>
+<!-- Prominent Limitations Card (Radical Transparency - Deliberately Visible) -->
+<div class="relative rounded-xl bg-surface-container-low p-gutter-base shadow-sm">
+<div class="flex items-center gap-2 mb-gutter-sm text-tertiary">
+<span class="material-symbols-outlined text-[20px]">report_problem</span>
+<h2 class="font-metric-md text-metric-md uppercase tracking-wider font-bold">
+        CE QUE LE ROBOT NE FAIT PAS
+      </h2>
+</div>
+<div class="flex flex-col gap-gutter-sm mb-gutter-base">
+<div class="flex items-start gap-2.5 p-2 rounded-lg bg-surface-container/60">
+<span class="font-metric-md text-metric-md text-error font-bold leading-none select-none">✕</span>
+<p class="font-body-sm text-body-sm text-on-surface">
+          Pas de compositions d'équipe ni d'analyse météo
+        </p>
+</div>
+<div class="flex items-start gap-2.5 p-2 rounded-lg bg-surface-container/60">
+<span class="font-metric-md text-metric-md text-error font-bold leading-none select-none">✕</span>
+<p class="font-body-sm text-body-sm text-on-surface">
+          Pas d'information sur les joueurs blessés de dernière minute
+        </p>
+</div>
+<div class="flex items-start gap-2.5 p-2 rounded-lg bg-surface-container/60">
+<span class="font-metric-md text-metric-md text-error font-bold leading-none select-none">✕</span>
+<p class="font-body-sm text-body-sm text-on-surface">
+          Marchés corners &amp; cartons sans cotes officielles bookmaker
+        </p>
+</div>
+<div class="flex items-start gap-2.5 p-2 rounded-lg bg-surface-container/60">
+<span class="font-metric-md text-metric-md text-error font-bold leading-none select-none">✕</span>
+<p class="font-body-sm text-body-sm text-on-surface">
+          Sur la longue durée, la marge du bookmaker l'emporte (−8.8 %)
+        </p>
+</div>
+</div>
+<!-- Honest Summary Callout -->
+<div class="rounded-lg bg-surface-container p-gutter-sm flex items-start gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary flex-shrink-0 mt-0.5">terminal</span>
+<p class="font-body-sm text-body-sm text-on-surface italic">
+        "C'est un outil mathématique d'aide à la décision, pas une machine à gains magique."
+      </p>
+</div>
+</div>
+<!-- Raw CSV Audit Download Micro Action -->
+<div class="flex justify-center items-center gap-2 pt-1 pb-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface text-metric-xs font-metric-xs uppercase tracking-wider transition-colors active:scale-95" id="btn-export-log">
+<span class="material-symbols-outlined text-[15px] text-primary">download</span>
+<span>TÉLÉCHARGER LE LOG BRUT (SHA-256)</span>
+</button>
+</div>
+</div>
+<script>
+  (function() {
+    const btnReal = document.getElementById('toggle-real');
+    const btnKelly = document.getElementById('toggle-kelly');
+    const btnExport = document.getElementById('btn-export-log');
+
+    if (btnReal && btnKelly) {
+      btnReal.addEventListener('click', () => {
+        btnReal.className = 'px-2 py-0.5 rounded font-metric-xs text-metric-xs bg-primary text-on-primary font-bold transition-colors';
+        btnKelly.className = 'px-2 py-0.5 rounded font-metric-xs text-metric-xs text-on-surface-variant transition-colors hover:text-on-surface';
+      });
+
+      btnKelly.addEventListener('click', () => {
+        btnKelly.className = 'px-2 py-0.5 rounded font-metric-xs text-metric-xs bg-primary text-on-primary font-bold transition-colors';
+        btnReal.className = 'px-2 py-0.5 rounded font-metric-xs text-metric-xs text-on-surface-variant transition-colors hover:text-on-surface';
+      });
+    }
+
+    if (btnExport) {
+      btnExport.addEventListener('click', () => {
+        const originalText = btnExport.innerHTML;
+        btnExport.innerHTML = '<span class="material-symbols-outlined text-[15px] text-secondary">check</span><span>LOG EXPÉDIÉ (213K LIGNES)</span>';
+        setTimeout(() => {
+          btnExport.innerHTML = originalText;
+        }, 2200);
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_-1px_8px_rgba(0,0,0,0.4)]" data-active-classes="text-primary-container"><div class="flex items-center justify-around h-16 px-gutter-xs"><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="accueil" href="#"><span class="material-symbols-outlined text-[22px]">home</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Accueil</span></a><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="selections" href="#"><span class="material-symbols-outlined text-[22px]">format_list_bulleted</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Sélections</span></a><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="corners" href="#"><span class="material-symbols-outlined text-[22px]">flag</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Corners</span></a><a aria-current="page" class="flex flex-col items-center justify-center w-16 h-14 transition-colors text-primary-container" data-path="bilan" href="#"><span class="material-symbols-outlined text-[22px]">bar_chart</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Bilan</span></a><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="methode" href="#"><span class="material-symbols-outlined text-[22px]">terminal</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Méthode</span></a></div></nav></body></html>
