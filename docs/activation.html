@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activation du compte — Pronos Foot</title>
+<link rel="icon" type="image/png" href="assets/icons-192.png">
+<link rel="apple-touch-icon" href="assets/icons-192.png">
+<meta name="theme-color" content="#0f131c">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f131c; color: #dfe2ef; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.65; padding: 24px 18px 60px; max-width: 560px; margin: 0 auto; min-height: 100vh; }
+  .badge { display: inline-block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: #8aebff; background: #181b25; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px; }
+  .carte { background: #181b25; border-radius: 16px; padding: 22px 20px; margin-top: 14px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+  h1 { font-size: 22px; line-height: 1.3; }
+  p { font-size: 14px; color: #bbc9cd; }
+  .num { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 15px; color: #dfe2ef; background: #0f131c; border: 1px dashed #3c494c; border-radius: 10px; padding: 10px 14px; word-break: break-all; }
+  .wa { display: block; text-align: center; background: #4ae176; color: #003915; font-weight: 700; font-size: 16px; padding: 15px; border-radius: 12px; text-decoration: none; }
+  .wa.off { background: #262a34; color: #859397; pointer-events: none; }
+  .liens { display: flex; gap: 10px; margin-top: 6px; }
+  .liens a { flex: 1; text-align: center; background: #262a34; color: #dfe2ef; padding: 12px; border-radius: 10px; text-decoration: none; font-size: 14px; }
+  .petit { font-size: 12px; color: #859397; margin-top: 16px; }
+</style>
+</head>
+<body>
+<span class="badge">Activation requise</span>
+<h1>Active ton compte en 2 minutes</h1>
+<div class="carte">
+  <p>Ton compte est bien créé. L'activation est <b style="color:#dfe2ef">manuelle et humaine</b> :
+  écris à l'administrateur sur WhatsApp, il active ton accès de <b style="color:#dfe2ef">30 jours</b>
+  dès réception. Sans activation, les conseils restent verrouillés — l'historique et le bilan, eux, restent publics.</p>
+  <div class="num" id="v-num">Numéro WhatsApp : chargement…</div>
+  <a class="wa off" id="v-wa" href="#">Ouvrir WhatsApp pour activer</a>
+  <p id="v-id" style="display:none"></p>
+</div>
+<div class="liens">
+  <a href="index.html">← Accueil</a>
+  <a href="connexion.html">J'ai déjà un compte</a>
+</div>
+<p class="petit">Après ton paiement/accord, l'administrateur active le compte et tu recevras
+l'accès complet : sélections du jour, combinés SAFE / COTE 2 / COTE 5, coupon corners.
+Aucun conseil n'est garanti : les paris comportent un risque de perte. 18 ans et plus.</p>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/config.js"></script>
+<script>
+(function () {
+  var cfg = window.VITRINE_CONFIG || {};
+  var num = String(cfg.WHATSAPP_ACTIVATION || "").replace(/[^0-9]/g, "");
+  var elNum = document.getElementById("v-num");
+  var wa = document.getElementById("v-wa");
+  var joli = num ? "+" + num.slice(0, 3) + " " + num.slice(3, 5) + " " + num.slice(5) : "";
+  function message(id) {
+    return "Bonjour, je veux activer mon compte PRONOS FOOT." + (id ? " Mon identifiant : " + id : "");
+  }
+  function branche(id) {
+    if (!num || num === "AREMPLIR") {
+      elNum.textContent = "Numéro WhatsApp en cours de configuration — revenez bientôt.";
+      wa.classList.add("off");
+      return;
+    }
+    elNum.textContent = "WhatsApp administrateur : " + joli;
+    wa.classList.remove("off");
+    wa.href = "https://wa.me/" + num + "?text=" + encodeURIComponent(message(id));
+  }
+  branche(null);
+  /* pré-remplit l'identifiant du compte connecté (e-mail ou numéro) */
+  try {
+    if (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase) {
+      var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+      sb.auth.getSession().then(function (r) {
+        var u = r.data && r.data.session && r.data.session.user;
+        if (!u) return;
+        var m = /^t(229\d{10})@tel\.pronos-foot\.bj$/.exec(u.email || "");
+        var id = m ? "+" + m[1].slice(0, 3) + " " + m[1].slice(3) : (u.email || "");
+        var p = document.getElementById("v-id");
+        p.style.display = "block";
+        p.innerHTML = "Ton compte : <b style=\"color:#dfe2ef\"></b>";
+        p.querySelector("b").textContent = id;
+        branche(id);
+      }).catch(function () {});
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

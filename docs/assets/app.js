@@ -127,7 +127,9 @@
       <div class="font-headline-md text-headline-md text-on-surface">Conseils réservés aux abonnés</div>
       <div class="font-body-sm text-body-sm text-on-surface-variant">${txt}
       L'historique et le bilan restent publics, pour la confiance. 30 jours d'accès, sans engagement.</div>
-      <div class="flex gap-2"><a href="connexion.html" class="flex-1 text-center bg-primary text-on-primary py-2.5 rounded-lg font-headline-sm text-headline-sm">Se connecter</a>
+      <div class="flex gap-2">${raison === "sans-abonnement"
+        ? `<a href="activation.html" class="flex-1 text-center bg-primary text-on-primary py-2.5 rounded-lg font-headline-sm text-headline-sm">Activer mon compte</a>`
+        : `<a href="connexion.html" class="flex-1 text-center bg-primary text-on-primary py-2.5 rounded-lg font-headline-sm text-headline-sm">Se connecter</a>`}
       <a href="acces.html" class="flex-1 text-center bg-surface-container-high text-on-surface py-2.5 rounded-lg font-headline-sm text-headline-sm">Voir l'accès</a></div></div>`;
   }
 
@@ -290,19 +292,34 @@
         <div class="font-body-xs text-body-xs text-on-surface-variant">Le robot s'abstient quand la qualité n'y est pas — c'est aussi ça, la discipline.</div>`;
     }
 
-    const compteur = (gros, petit, sous) => `<div class="bg-surface-container p-gutter-sm rounded-lg flex flex-col">
-      <span class="font-metric-display text-metric-lg text-primary leading-none">${gros}</span>
+    const compteur = (gros, petit, sous, couleur) => `<div class="bg-surface-container p-gutter-sm rounded-lg flex flex-col">
+      <span class="font-metric-display text-metric-lg ${couleur || "text-primary"} leading-none">${gros}</span>
       <span class="font-label-micro text-label-micro text-on-surface-variant uppercase tracking-wider mt-gutter-xs">${petit}</span>
       <span class="font-metric-xs text-metric-xs text-on-surface-variant">${sous}</span></div>`;
 
     const pcHier = selHier.length ? Math.round(100 * tHier / selHier.length) + " %" : "—";
     const pcSafe = safes.length ? Math.round(100 * tSafe / safes.length) + " % de réussite" : "archive vide";
+    /* COTE 2 / COTE 5 : uniquement la veille */
+    const etatComb = (c) => {
+      if (!c) return { gros: "—", sous: "pas publié hier", couleur: "text-outline" };
+      const legs = c.jambes || [];
+      const res = legs.filter((l) => l.resultat && l.resultat.touche != null);
+      const perdu = c.touche === false || res.some((l) => !l.resultat.touche);
+      if (perdu) return { gros: "✗", sous: "manqué hier", couleur: "text-error" };
+      if (c.touche === true) return { gros: "✓", sous: `passé (${legs.length} jambes)`, couleur: "text-secondary" };
+      if (res.length) return { gros: `${res.length}/${legs.length}`, sous: "en cours", couleur: "text-primary" };
+      return { gros: "—", sous: "en attente", couleur: "text-outline" };
+    };
+    const e2 = etatComb(D.comb.find((c) => c.nom === "cote2" && c.jour === h));
+    const e5 = etatComb(D.comb.find((c) => c.nom === "cote5" && c.jour === h));
     return `<div id="z-veille" class="mx-gutter-base mt-gutter-sm rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
       <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">Résultats d'hier · ${esc(h)}</span>
       ${blocSafe}
       <div class="grid grid-cols-2 gap-gutter-sm">
-        ${compteur(selHier.length ? `${tHier}/${selHier.length}` : "—", "Conseils touchés hier", pcHier)}
-        ${compteur(safes.length ? `${tSafe}/${safes.length}` : "—", "SAFE passés depuis le lancement", pcSafe)}
+        ${compteur(selHier.length ? `${tHier}/${selHier.length}` : "—", "Conseils touchés hier", pcHier, "text-primary")}
+        ${compteur(e2.gros, "Cote 2 hier", e2.sous, e2.couleur)}
+        ${compteur(safes.length ? `${tSafe}/${safes.length}` : "—", "SAFE passés depuis le lancement", pcSafe, "text-primary")}
+        ${compteur(e5.gros, "Cote 5 hier", e5.sous, e5.couleur)}
       </div></div>`;
   }
 
@@ -617,8 +634,8 @@
           });
           if (r.error) throw r.error;
           if (r.data.session) {
-            msg.textContent = "Compte créé, bienvenue. Ton numéro est lié : " + (idf.tel || idf.email);
-            setTimeout(() => location.href = "index.html", 900);
+            msg.textContent = "Compte créé — dernière étape : l'activation.";
+            setTimeout(() => location.href = "activation.html", 900);
           } else if (idf.tel) {
             msg.textContent = "Compte créé, mais la confirmation e-mail est encore active côté serveur — " +
               "avec un numéro de téléphone tu ne pourras pas la recevoir. Réglage à faire : " +
@@ -634,21 +651,74 @@
   function etatSession() {
     const btn = document.getElementById("v-compte");
     if (!btn || !SB) return;
+    let menu = document.getElementById("v-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.id = "v-menu";
+      menu.className = "fixed z-[60] right-3 top-[68px] w-64 rounded-xl bg-surface-container-high " +
+        "border border-outline-variant shadow-2xl p-2 flex-col gap-1";
+      menu.style.display = "none";
+      document.body.appendChild(menu);
+      document.addEventListener("click", (e) => {
+        if (menu.style.display !== "none" && !menu.contains(e.target) && !btn.contains(e.target))
+          menu.style.display = "none";
+      });
+    }
+    const afficheId = (email) => {
+      const m = /^t(229)(01\d{8})@tel\.pronos-foot\.bj$/.exec(email || "");
+      if (!m) return email || "";
+      const d = m[2];
+      return "+229 " + d.slice(0, 2) + " " + d.slice(2, 4) + " " + d.slice(4, 6) + " " +
+        d.slice(6, 8) + " " + d.slice(8);
+    };
+    const dateFin = (f) => { try {
+      return new Date(f + "T12:00:00Z").toLocaleDateString("fr-FR",
+        { day: "numeric", month: "long", year: "numeric" });
+    } catch (e) { return f; } };
+    async function majBouton() {
+      const { data } = await SB.auth.getSession();
+      const sess = data && data.session;
+      if (!sess) {
+        btn.style.outline = "";
+        btn.title = "Connexion";
+        btn.onclick = () => location.href = "connexion.html";
+        menu.style.display = "none";
+        return;
+      }
+      btn.style.outline = "2px solid #4ae176";
+      btn.title = "Mon compte";
+      const u = sess.user;
+      let abo = null;
+      try {
+        const r = await SB.from("abonnements").select("fin,plan").eq("user_id", u.id)
+          .gte("fin", aujourdHui()).limit(1);
+        abo = (r.data || [])[0] || null;
+      } catch (e) {}
+      menu.innerHTML = `
+        <div class="px-2 py-1.5">
+          <div class="font-label-micro text-label-micro uppercase tracking-widest text-outline">Mon compte</div>
+          <div class="font-body-sm text-body-sm text-on-surface break-all">${esc(afficheId(u.email))}</div>
+        </div>
+        <div class="px-2 py-1.5">
+          <div class="font-label-micro text-label-micro uppercase tracking-widest text-outline">Mon abonnement</div>
+          <div class="font-body-sm text-body-sm ${abo ? "text-secondary" : "text-error"}">${
+            abo ? "Actif jusqu'au " + esc(dateFin(abo.fin)) : "Inactif"}</div>
+        </div>
+        ${abo ? "" : `<a href="activation.html" class="mx-1 text-center bg-secondary text-on-secondary py-2 rounded-lg font-headline-sm text-headline-sm">Activer via WhatsApp</a>`}
+        <button id="v-out" class="mx-1 text-center bg-surface-container-low text-error py-2 rounded-lg font-headline-sm text-headline-sm">Se déconnecter</button>`;
+      const out = menu.querySelector("#v-out");
+      if (out) out.onclick = async () => { await SB.auth.signOut(); location.reload(); };
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        menu.style.display = menu.style.display === "none" ? "flex" : "none";
+      };
+    }
     try {
       SB.auth.onAuthStateChange((ev) => {
         if (ev === "SIGNED_IN" || ev === "SIGNED_OUT") majBouton();
       });
     } catch (e) {}
     majBouton();
-    function majBouton() {
-    SB.auth.getSession().then(({ data }) => {
-      if (data && data.session) {
-        btn.title = "Se déconnecter (" + (data.session.user.email || "") + ")";
-        btn.style.outline = "2px solid #4ae176";
-        btn.onclick = async () => { await SB.auth.signOut(); location.reload(); };
-      } else btn.onclick = () => location.href = "connexion.html";
-    });
-    }
   }
 
   /* ---------------------------------------------------------- démarrage */
@@ -677,6 +747,11 @@
     if (besoinData) {
       const D = await charge();
       window.__ACC = await accesOk();
+      if (!window.__ACC.ok && window.__ACC.raison === "sans-abonnement" &&
+          (PAGE === "selections" || PAGE === "corners")) {
+        location.replace("activation.html");
+        return;
+      }
       if (D) {
         if (PAGE === "accueil") pageAccueil(D);
         if (PAGE === "selections") (window.__ACC.ok ? pageSelections(D) : verrou("selections"));
