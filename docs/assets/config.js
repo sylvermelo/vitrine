@@ -8,5 +8,5 @@ window.VITRINE_CONFIG = {
   // ← REMPLACE "A_REMPLIR" par ton numéro WhatsApp au format international
   //    SANS le + et SANS espaces. Exemple Bénin : "2290197482946".
   //    Sert uniquement au bouton WhatsApp de la page activation.html.
-  WHATSAPP_ACTIVATION: "A_REMPLIR",
+  WHATSAPP_ACTIVATION: "2290196575755",
 };
