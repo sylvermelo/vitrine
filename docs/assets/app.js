@@ -73,6 +73,48 @@
     if (main) main.prepend(b);
   }
 
+  /* Accès conseillé : session ouverte + abonnement actif en base. */
+  async function accesOk() {
+    if (!SB) return { ok: false, raison: "anon" };
+    try {
+      const { data } = await SB.auth.getSession();
+      if (!data || !data.session) return { ok: false, raison: "anon" };
+      const r = await SB.from("abonnements").select("fin,plan")
+        .eq("user_id", data.session.user.id).gte("fin", aujourdHui()).limit(1);
+      if (r.error || !(r.data || []).length) return { ok: false, raison: "sans-abonnement" };
+      return { ok: true };
+    } catch (e) { return { ok: false, raison: "anon" }; }
+  }
+
+  function carteVerrou(raison) {
+    const txt = raison === "sans-abonnement"
+      ? "Ton compte est connecté mais aucun abonnement actif n'y est rattaché."
+      : "Les conseils du jour — sélections, combinés, coupon corners — sont réservés aux abonnés.";
+    return `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
+      <div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary">lock</span>
+      <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">Zone abonnés</span></div>
+      <div class="font-headline-md text-headline-md text-on-surface">Conseils réservés aux abonnés</div>
+      <div class="font-body-sm text-body-sm text-on-surface-variant">${txt}
+      L'historique et le bilan restent publics, pour la confiance. 30 jours d'accès, sans engagement.</div>
+      <div class="flex gap-2"><a href="connexion.html" class="flex-1 text-center bg-primary text-on-primary py-2.5 rounded-lg font-headline-sm text-headline-sm">Se connecter</a>
+      <a href="acces.html" class="flex-1 text-center bg-surface-container-high text-on-surface py-2.5 rounded-lg font-headline-sm text-headline-sm">Voir l'accès</a></div></div>`;
+  }
+
+  function verrou(page) {
+    const raison = (window.__ACC || {}).raison || "anon";
+    if (page === "selections") {
+      const z1 = conteneurParRepere("Liverpool", CARTE, "v-lock1");
+      if (z1) z1.innerHTML = carteVerrou(raison);
+      const z2 = conteneurParRepere("SAFE DU JOUR", CARTE, "v-lock2");
+      if (z2) z2.remove();
+    } else {
+      const z = conteneurParRepere("Aston Villa vs Wolves", CARTE, "v-lock");
+      if (z) { z.className = ""; z.innerHTML = carteVerrou(raison); }
+      majTexte("1.85", "—", true);
+      majTexte("54 %", "—", true);
+    }
+  }
+
   /* ---------------------------------------------------------- gabarits */
   const PILL = "px-2 py-1 bg-surface-container-highest text-primary font-metric-xs " +
     "text-metric-xs tracking-wider uppercase whitespace-nowrap";
@@ -160,6 +202,7 @@
       sels = D.sel.filter((s) => s.jour === jour);
     }
     sels = sels.sort((a, b) => (b.p || 0) - (a.p || 0)).slice(0, 3);
+    const accOk = (window.__ACC || {}).ok;
     const row = feuilleParTexte("Arsenal vs Chelsea");
     if (row) {
       const ligne = monte(row, LIGNE);
@@ -169,8 +212,7 @@
         z.id = "v-sel";
         z.className = "divide-y divide-surface-container-low flex flex-col";
         wrapper.parentElement.replaceChild(z, wrapper);
-        z.innerHTML = sels.length ? sels.map(ligneSelection).join("") :
-          `<div class="p-gutter-base font-body-sm text-body-sm text-on-surface-variant">Aucune sélection archivée pour l'instant — le robot publie chaque heure.</div>`;
+        z.innerHTML = sels.length && accOk ? sels.map(ligneSelection).join("") : carteVerrou((window.__ACC || {}).raison || "anon");
       }
     }
     const resolues = D.sel.filter((s) => s.touche != null);
@@ -352,6 +394,26 @@
         await SB.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname.replace(/[^/]*$/, "") + "index.html" } });
       } catch (e) { msg.textContent = "Google : à activer côté Supabase (Auth → Providers)."; }
     };
+    if (mode === "connexion" && bouton) {
+      const wrap = document.createElement("div");
+      wrap.className = "mt-gutter-base flex flex-col gap-gutter-sm px-gutter-base";
+      wrap.innerHTML = `<div class="font-label-micro text-label-micro uppercase tracking-widest text-outline">Code opérateur</div>
+        <input id="v-code" type="password" placeholder="••••••••" autocomplete="off"
+          class="w-full bg-surface-container-low rounded-lg px-gutter-base py-2.5 font-metric-xs text-metric-xs text-on-surface outline-none">
+        <button id="v-code-btn" class="bg-surface-container-high text-on-surface rounded-lg py-2.5 font-headline-sm text-headline-sm">Entrer avec le code</button>`;
+      bouton.parentElement.appendChild(wrap);
+      wrap.querySelector("#v-code-btn").onclick = async () => {
+        msg.textContent = "…";
+        try {
+          const r = await SB.auth.signInWithPassword({
+            email: CFG.OPERATEUR_EMAIL,
+            password: wrap.querySelector("#v-code").value });
+          if (r.error) throw r.error;
+          msg.textContent = "Accès opérateur ouvert.";
+          setTimeout(() => location.href = "selections.html", 600);
+        } catch (e) { msg.textContent = "Code refusé."; }
+      };
+    }
     if (!bouton || !email || !mdp) {
       msg.textContent = "Formulaire incomplet — signale-le, je corrige.";
       return;
@@ -416,11 +478,14 @@
     }
     if (besoinData) {
       const D = await charge();
+      window.__ACC = await accesOk();
       if (D) {
         if (PAGE === "accueil") pageAccueil(D);
-        if (PAGE === "selections") pageSelections(D);
-        if (PAGE === "corners") pageCorners(D);
+        if (PAGE === "selections") (window.__ACC.ok ? pageSelections(D) : verrou("selections"));
+        if (PAGE === "corners") (window.__ACC.ok ? pageCorners(D) : verrou("corners"));
         if (PAGE === "bilan") pageBilan(D);
+      } else if (!window.__ACC.ok && (PAGE === "selections" || PAGE === "corners")) {
+        verrou(PAGE);
       }
     }
     etatSession();

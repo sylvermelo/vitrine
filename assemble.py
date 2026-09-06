@@ -19,7 +19,6 @@ PAGES = {           # fichier src -> (page publiée, clé data-page)
     "selections.html": ("selections.html", "selections"),
     "corners.html":    ("corners.html", "corners"),
     "bilan.html":      ("bilan.html", "bilan"),
-    "methode.html":    ("methode.html", "methode"),
     "acces.html":      ("acces.html", "acces"),
     "connexion.html":  ("connexion.html", "connexion"),
     "inscription.html": ("inscription.html", "inscription"),
@@ -30,7 +29,7 @@ CHEMIN_NAV = {      # data-path Stitch -> fichier publié
     "selections": "selections.html",
     "corners": "corners.html",
     "bilan": "bilan.html",
-    "methode": "methode.html",
+    "methode": "acces.html",      # Méthode retirée : le 5e slot mène à Accès
 }
 
 HEAD_INJECT = (
@@ -66,6 +65,11 @@ def rewrit_nav(html, cle):
         if not cible:
             return tag
         tag = re.sub(r'\s*href="[^"]*"', f' href="{cible}"', tag)
+        if dp.group(1) == "methode":
+            tag = re.sub(r'(<span class="material-symbols-outlined text-\[22px\]">)[^<]*(</span>)',
+                         r'\1key\2', tag)
+            tag = re.sub(r'(<span class="font-label-micro[^"]*"[^>]*>)Méthode(</span>)',
+                         r'\1Accès\2', tag)
         actif = dp.group(1) == cle
         tag = tag.replace(' aria-current="page"', "")
         if actif:
@@ -74,7 +78,8 @@ def rewrit_nav(html, cle):
         else:
             tag = tag.replace("text-primary-container", "text-on-surface-variant")
         return tag
-    return re.sub(r"<a\b[^>]*data-path=[^>]*>", fixe, html)
+    return re.sub(r"<a\b[^>]*data-path=[^>]*>(?:(?!</a>).)*?</a>",
+                    fixe, html, flags=re.S)
 
 
 def assemble(src_nom, pub, cle):
@@ -82,6 +87,13 @@ def assemble(src_nom, pub, cle):
     html = html.replace("</head>", HEAD_INJECT + "</head>", 1)
     html = re.sub(r"<body\b", f'<body data-page="{cle}"', html, count=1)
     html = rewrit_nav(html, cle)
+    # titre de page dans le header (« TERMINAL VIEW » + nom)
+    TITRES = {"accueil": "Accueil", "selections": "Sélections",
+              "corners": "Corners", "bilan": "Bilan", "acces": "Accès",
+              "connexion": "Connexion", "inscription": "Inscription",
+              "paiement": "Abonnement"}
+    html = re.sub(r'(TERMINAL VIEW</span><span class="font-headline-sm[^>]*>)[^<]*',
+                  lambda m: m.group(1) + TITRES.get(cle, "PRONOS FOOT"), html, count=1)
     # boutons héros : ancres href="#" dont le texte interne correspond
     for texte, cible in (("Voir les sélections du jour", "selections.html"),
                          ("Le bilan honnête", "bilan.html"),
