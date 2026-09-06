@@ -58,6 +58,17 @@
     parent.parentElement.replaceChild(d, parent);
     return d;
   }
+  /* Zone purgée au build (id) ; repli : ancien repère mock si HTML d'ancienne version en cache. */
+  function zone(id, repere, reClasse) {
+    const z = document.getElementById(id);
+    if (z) return z;
+    return repere ? conteneurParRepere(repere, reClasse, id) : null;
+  }
+  function setTexte(id, txt) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = txt; return true; }
+    return false;
+  }
   function majTexte(repere, nouveau, exact) {
     const leaf = feuilleParTexte(repere, exact);
     if (leaf) { leaf.textContent = nouveau; return true; }
@@ -103,15 +114,15 @@
   function verrou(page) {
     const raison = (window.__ACC || {}).raison || "anon";
     if (page === "selections") {
-      const z1 = conteneurParRepere("Liverpool", CARTE, "v-lock1");
+      const z1 = zone("z-list", "Liverpool", CARTE);
       if (z1) z1.innerHTML = carteVerrou(raison);
-      const z2 = conteneurParRepere("SAFE DU JOUR", CARTE, "v-lock2");
-      if (z2) z2.remove();
+      const z2 = zone("z-comb", "SAFE DU JOUR", CARTE);
+      if (z2) z2.innerHTML = "";
     } else {
-      const z = conteneurParRepere("Aston Villa vs Wolves", CARTE, "v-lock");
-      if (z) { z.className = ""; z.innerHTML = carteVerrou(raison); }
-      majTexte("1.85", "—", true);
-      majTexte("54 %", "—", true);
+      const z = zone("z-legs", "Aston Villa vs Wolves", CARTE);
+      if (z) { z.className = "flex flex-col gap-gutter-sm"; z.innerHTML = carteVerrou(raison); }
+      setTexte("c-cote", "—"); setTexte("c-proba", "—");
+      majTexte("1.85", "—", true); majTexte("54 %", "—", true);
     }
   }
 
@@ -203,21 +214,17 @@
     }
     sels = sels.sort((a, b) => (b.p || 0) - (a.p || 0)).slice(0, 3);
     const accOk = (window.__ACC || {}).ok;
-    const row = feuilleParTexte("Arsenal vs Chelsea");
-    if (row) {
-      const ligne = monte(row, LIGNE);
-      const wrapper = ligne && ligne.parentElement;
-      if (wrapper) {
-        const z = document.createElement("div");
-        z.id = "v-sel";
-        z.className = "divide-y divide-surface-container-low flex flex-col";
-        wrapper.parentElement.replaceChild(z, wrapper);
-        z.innerHTML = sels.length && accOk ? sels.map(ligneSelection).join("") : carteVerrou((window.__ACC || {}).raison || "anon");
-      }
+    const z = zone("z-sel", null, null);
+    if (z) {
+      z.className = "divide-y divide-surface-container-low flex flex-col";
+      z.innerHTML = sels.length && accOk ? sels.map(ligneSelection).join("") : carteVerrou((window.__ACC || {}).raison || "anon");
     }
     const resolues = D.sel.filter((s) => s.touche != null);
     const touches = resolues.filter((s) => s.touche).length;
-    if (resolues.length) majTexte("78 %", Math.round(100 * touches / resolues.length) + " %", true);
+    if (resolues.length) {
+      const t = Math.round(100 * touches / resolues.length) + " %";
+      if (!setTexte("a-hit", t)) majTexte("78 %", t, true);
+    }
     majTexte("Source ESPN", `source ESPN · ${touches}/${resolues.length} vérifiées`);
   }
 
@@ -225,8 +232,8 @@
     const auj = aujourdHui();
     const jours = [...new Set(D.sel.map((s) => s.jour))].sort().reverse();
     let jour = jours.find((j) => j >= auj) || jours[0] || auj;
-    const zListe = conteneurParRepere("Liverpool", CARTE, "s-list");
-    const zComb = conteneurParRepere("SAFE DU JOUR", CARTE, "s-comb");
+    const zListe = zone("z-list", "Liverpool", CARTE);
+    const zComb = zone("z-comb", "SAFE DU JOUR", CARTE);
     const rend = () => {
       if (zListe) {
         const sels = D.sel.filter((s) => s.jour === jour).sort((a, b) => (b.p || 0) - (a.p || 0));
@@ -258,10 +265,9 @@
   function pageCorners(D) {
     const cp = D.comb.filter((c) => c.nom === "corners_montante")
       .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""))[0];
-    const z = conteneurParRepere("Aston Villa vs Wolves", CARTE, "c-legs");
+    const z = zone("z-legs", "Aston Villa vs Wolves", CARTE);
     if (!cp) {
-      majTexte("1.85", "—", true);
-      majTexte("54 %", "—", true);
+      setTexte("c-cote", "—"); setTexte("c-proba", "—");
       if (z) z.innerHTML = `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-2">
         <div class="font-headline-md text-headline-md text-on-surface">AUCUN COUPON CE JOUR</div>
         <div class="font-body-sm text-body-sm text-on-surface-variant">Aucun match n'atteint 85 % de fréquence
@@ -269,8 +275,8 @@
         discipline algorithmique absolue.</div></div>`;
       return;
     }
-    majTexte("1.85", f2(cp.cote), true);
-    majTexte("54 %", pct(cp.p_combine), true);
+    if (!setTexte("c-cote", f2(cp.cote))) majTexte("1.85", f2(cp.cote), true);
+    if (!setTexte("c-proba", pct(cp.p_combine))) majTexte("54 %", pct(cp.p_combine), true);
     const titre = feuilleParTexte("COUPON MONTANTE");
     if (titre && cp.jour) titre.textContent = "COUPON MONTANTE — " + cp.jour;
     if (z) {
@@ -304,14 +310,19 @@
   function pageBilan(D) {
     const resolues = D.sel.filter((s) => s.touche != null);
     const touches = resolues.filter((s) => s.touche).length;
-    if (resolues.length) majTexte("78 %", Math.round(100 * touches / resolues.length) + " %", true);
-    majTexte("sélections touchées (43/55)", `sélections touchées (${touches}/${resolues.length})`);
+    if (resolues.length) {
+      const t = Math.round(100 * touches / resolues.length) + " %";
+      if (!setTexte("b-hit", t)) majTexte("78 %", t, true);
+    }
+    if (!setTexte("b-hit-cap", `sélections touchées (${touches}/${resolues.length})`))
+      majTexte("sélections touchées (43/55)", `sélections touchées (${touches}/${resolues.length})`);
     let roi = 0, n = 0;
     for (const s of resolues) {
       if (s.cote_marche == null) continue;
       roi += s.touche ? s.cote_marche - 1 : -1; n++;
     }
-    majTexte("+2.1 u", (roi >= 0 ? "+" : "") + roi.toFixed(1) + " u", true);
+    const roiTxt = (roi >= 0 ? "+" : "") + roi.toFixed(1) + " u";
+    if (!setTexte("b-roi", roiTxt)) majTexte("+2.1 u", roiTxt, true);
     majTexte("ROI simulé sur 30 jours", `ROI simulé sur ${n} sélections cotées`);
     const parMois = {};
     for (const s of resolues) {
@@ -320,16 +331,10 @@
       parMois[m].n++; if (s.touche) parMois[m].t++;
     }
     const mois = Object.keys(parMois).sort().slice(-6);
-    const leafMois = feuilleParTexte("OCT");
-    if (leafMois && mois.length) {
-      const col = leafMois.parentElement;
-      const ligne = col && col.parentElement;
-      if (ligne) {
-        const z = document.createElement("div");
-        z.id = "b-mois";
-        z.className = "flex items-end justify-between gap-2 px-gutter-base";
-        z.style.height = "160px";
-        ligne.parentElement.replaceChild(z, ligne);
+    const zMois = document.getElementById("z-mois");
+    if (zMois && mois.length) {
+      {
+        const z = zMois;
         z.innerHTML = mois.map((m) => {
           const r = parMois[m], taux = Math.round(100 * r.t / r.n);
           const nom = new Date(m + "-15T12:00:00Z").toLocaleDateString("fr-FR", { month: "short" }).toUpperCase();
@@ -348,9 +353,8 @@
     }
     const top = Object.entries(parMarche).filter(([, v]) => v.n >= 4)
       .sort((a, b) => b[1].n - a[1].n).slice(0, 5);
-    const zM = conteneurParRepere("Under 2.5", /flex flex-col gap-1|flex-col/, "b-marches");
+    const zM = zone("z-marches", "Under 2.5", /flex flex-col gap-1|flex-col/);
     if (zM && top.length) {
-      zM.className = "flex flex-col gap-gutter-sm";
       zM.innerHTML = top.map(([k, v]) => {
         const taux = Math.round(100 * v.t / v.n);
         return `<div class="flex flex-col gap-1">
@@ -363,23 +367,43 @@
   }
 
   /* ---------------------------------------------------------- auth */
+  /* Téléphone Bénin SANS OTP : le compte est un e-mail technique dérivé du
+     numéro (t22901XXXXXXXX@tel.pronos-foot.bj). L'utilisateur ne voit que son
+     numéro + son mot de passe. Nécessite "Confirm email" OFF côté Supabase. */
+  function normTel(v) {
+    const d = String(v || "").replace(/[\s.\-()]/g, "");
+    const m = d.match(/^(?:\+?229)?(01\d{8})$/);
+    return m ? "229" + m[1] : null;
+  }
+  function identifiant(v) {
+    const t = normTel(v);
+    if (t) return { email: "t" + t + "@tel.pronos-foot.bj", tel: t, ok: true };
+    const e = String(v || "").trim().toLowerCase();
+    return { email: e, tel: null, ok: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) };
+  }
+  function msgErreur(e) {
+    const m = String((e && e.message) || e);
+    if (/invalid login credentials/i.test(m)) return "Identifiant ou mot de passe incorrect.";
+    if (/already been registered|already registered/i.test(m))
+      return "Ce numéro (ou e-mail) a déjà un compte — passe par la page Connexion.";
+    if (/password should be at least/i.test(m)) return "Mot de passe trop court : 6 caractères minimum.";
+    if (/email rate limit/i.test(m)) return "Trop de tentatives — réessaie dans une minute.";
+    return m;
+  }
   function pageAuth(mode) {
-    const segTel = feuilleParTexte("Téléphone (Bénin)") || feuilleParTexte("NUMÉRO TERMINAL GSM");
-    if (segTel) {
-      const btn = monte(segTel, /rounded|bg-surface/) || segTel;
-      btn.style.opacity = ".45";
-      btn.title = "OTP SMS : bientôt (passerelle payante requise)";
-    }
-    let email = document.querySelector("main input[type=email]");
-    if (!email) {
-      const tel = document.querySelector("main input[type=tel], main input[inputmode=tel], main input[placeholder*='97']");
-      if (tel) {
-        tel.type = "email"; tel.placeholder = "ton@email.com";
-        tel.removeAttribute("inputmode"); tel.removeAttribute("maxlength");
-        email = tel;
-        const lab = feuilleParTexte("CANAL NUMÉRIQUE (+229)") || feuilleParTexte("NUMÉRO TERMINAL GSM");
-        if (lab) lab.textContent = "ADRESSE E-MAIL";
-      }
+    let email = document.querySelector("main input[type=email]") ||
+      document.querySelector("main input[type=tel], main input[inputmode=tel], main input[inputmode=numeric]");
+    if (email) {
+      email.type = "text";
+      email.inputMode = "email";
+      email.placeholder = "e-mail ou +229 01 XX XX XX XX";
+      email.removeAttribute("maxlength");
+      email.autocomplete = "username";
+      const lab = feuilleParTexte("ADRESSE E-MAIL") || feuilleParTexte("CANAL NUMÉRIQUE (+229)") ||
+        feuilleParTexte("NUMÉRO TERMINAL GSM") || feuilleParTexte("E-MAIL");
+      if (lab) lab.textContent = "E-MAIL OU NUMÉRO (+229)";
+      const aide = feuilleParTexte("OTP SMS : bientôt");
+      if (aide) aide.textContent = "Pas de code SMS : ton numéro + ton mot de passe suffisent.";
     }
     const mdp = document.querySelector("main input[type=password]");
     const bouton = [...document.querySelectorAll("main button, main a")]
@@ -426,19 +450,36 @@
         msg.textContent = "Coche la certification (18 ans + conditions) d'abord.";
         return;
       }
+      const idf = identifiant(email.value);
+      if (!idf.ok) {
+        msg.textContent = "Numéro béninois attendu : 229 01 + 8 chiffres (ex. 01 97 48 29 46), ou une adresse e-mail.";
+        return;
+      }
       try {
         if (mode === "connexion") {
-          const r = await SB.auth.signInWithPassword({ email: email.value.trim(), password: mdp.value });
+          const r = await SB.auth.signInWithPassword({ email: idf.email, password: mdp.value });
           if (r.error) throw r.error;
-          msg.textContent = "Connecté — retour à l'accueil.";
+          msg.textContent = idf.tel ? "Connecté avec le " + idf.tel.slice(0, 3) + " " + idf.tel.slice(3) + "."
+            : "Connecté — retour à l'accueil.";
           setTimeout(() => location.href = "index.html", 700);
         } else {
-          const r = await SB.auth.signUp({ email: email.value.trim(), password: mdp.value });
+          const r = await SB.auth.signUp({
+            email: idf.email, password: mdp.value,
+            options: { data: { phone: idf.tel || null } },
+          });
           if (r.error) throw r.error;
-          msg.textContent = r.data.session ? "Compte créé, bienvenue."
-            : "Compte créé : confirme ton e-mail puis connecte-toi.";
+          if (r.data.session) {
+            msg.textContent = "Compte créé, bienvenue. Ton numéro est lié : " + (idf.tel || idf.email);
+            setTimeout(() => location.href = "index.html", 900);
+          } else if (idf.tel) {
+            msg.textContent = "Compte créé, mais la confirmation e-mail est encore active côté serveur — " +
+              "avec un numéro de téléphone tu ne pourras pas la recevoir. Réglage à faire : " +
+              "Supabase → Authentication → Providers → Email → désactiver « Confirm email ».";
+          } else {
+            msg.textContent = "Compte créé : confirme ton e-mail puis connecte-toi.";
+          }
         }
-      } catch (err) { msg.textContent = err.message || String(err); }
+      } catch (err) { msg.textContent = msgErreur(err); }
     };
   }
 

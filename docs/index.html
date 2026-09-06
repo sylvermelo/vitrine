@@ -69,7 +69,7 @@
 <!-- Stat 2 (Dominant) -->
 <div class="bg-surface-container-high p-gutter-sm rounded-lg flex flex-col justify-between shadow-sm min-h-[96px]">
 <div class="flex items-center justify-between">
-<span class="font-metric-display text-metric-lg text-secondary">78 %</span>
+<span id="a-hit" class="font-metric-display text-metric-lg text-secondary">—</span>
 <span class="material-symbols-outlined text-secondary text-[14px]">check_circle</span>
 </div>
 <div class="flex flex-col mt-gutter-xs">
@@ -102,71 +102,7 @@
 <span class="font-metric-xs text-metric-xs text-on-surface-variant">14:30 GMT</span>
 </div>
 </div>
-<!-- Quantitative Rows -->
-<div class="divide-y divide-surface-container-low flex flex-col">
-<!-- ROW 1 -->
-<div class="p-gutter-base hover:bg-surface-container-high/40 transition-colors flex flex-col space-y-gutter-xs">
-<div class="flex items-center justify-between">
-<span class="font-label-micro text-label-micro text-outline tracking-wider uppercase">Premier League · R28</span>
-<span class="bg-surface-container-lowest text-primary font-metric-xs text-metric-xs px-1.5 py-0.5 rounded uppercase">Under 2.5</span>
-</div>
-<div class="flex items-center justify-between">
-<div class="flex flex-col min-w-0">
-<span class="font-headline-sm text-headline-sm text-on-surface truncate">Arsenal vs Chelsea</span>
-<span class="font-body-sm text-metric-xs text-on-surface-variant">Modèle Poisson xG: 1.12 - 0.88</span>
-</div>
-<div class="flex items-end flex-col pl-gutter-sm flex-shrink-0">
-<div class="flex items-baseline gap-1">
-<span class="font-metric-lg text-metric-md text-secondary font-semibold">82%</span>
-<span class="font-metric-xs text-metric-xs text-outline">P(E)</span>
-</div>
-<span class="font-metric-sm text-metric-xs text-on-surface-variant">Cote juste: <strong class="text-on-surface font-metric-sm">1.22</strong></span>
-</div>
-</div>
-</div>
-<!-- ROW 2 -->
-<div class="p-gutter-base hover:bg-surface-container-high/40 transition-colors flex flex-col space-y-gutter-xs bg-surface-container-low/30">
-<div class="flex items-center justify-between">
-<span class="font-label-micro text-label-micro text-outline tracking-wider uppercase">La Liga · R29</span>
-<span class="bg-surface-container-lowest text-primary font-metric-xs text-metric-xs px-1.5 py-0.5 rounded uppercase">Double Chance 1X</span>
-</div>
-<div class="flex items-center justify-between">
-<div class="flex flex-col min-w-0">
-<span class="font-headline-sm text-headline-sm text-on-surface truncate">Real Madrid vs Real Sociedad</span>
-<span class="font-body-sm text-metric-xs text-on-surface-variant">Dominance territoriale 64%</span>
-</div>
-<div class="flex items-end flex-col pl-gutter-sm flex-shrink-0">
-<div class="flex items-baseline gap-1">
-<span class="font-metric-lg text-metric-md text-secondary font-semibold">87%</span>
-<span class="font-metric-xs text-metric-xs text-outline">P(E)</span>
-</div>
-<span class="font-metric-sm text-metric-xs text-on-surface-variant">Cote juste: <strong class="text-on-surface font-metric-sm">1.15</strong></span>
-</div>
-</div>
-</div>
-<!-- ROW 3 -->
-<div class="p-gutter-base hover:bg-surface-container-high/40 transition-colors flex flex-col space-y-gutter-xs">
-<div class="flex items-center justify-between">
-<span class="font-label-micro text-label-micro text-outline tracking-wider uppercase">Serie A · R30</span>
-<span class="bg-surface-container-lowest text-primary font-metric-xs text-metric-xs px-1.5 py-0.5 rounded uppercase">Over 1.5</span>
-</div>
-<div class="flex items-center justify-between">
-<div class="flex flex-col min-w-0">
-<span class="font-headline-sm text-headline-sm text-on-surface truncate">Inter vs Atalanta</span>
-<span class="font-body-sm text-metric-xs text-on-surface-variant">Tirs cadrés moy.: 11.4 / match</span>
-</div>
-<div class="flex items-end flex-col pl-gutter-sm flex-shrink-0">
-<div class="flex items-baseline gap-1">
-<span class="font-metric-lg text-metric-md text-secondary font-semibold">79%</span>
-<span class="font-metric-xs text-metric-xs text-outline">P(E)</span>
-</div>
-<span class="font-metric-sm text-metric-xs text-on-surface-variant">Cote juste: <strong class="text-on-surface font-metric-sm">1.27</strong></span>
-</div>
-</div>
-</div>
-</div>
-<!-- Action Link Footer -->
-<a class="bg-surface-container-high px-gutter-base py-3 flex items-center justify-between transition-colors hover:bg-surface-bright group" href="selections.html">
+<div id="z-sel" class="divide-y divide-surface-container-low flex flex-col"></div><a class="bg-surface-container-high px-gutter-base py-3 flex items-center justify-between transition-colors hover:bg-surface-bright group" href="selections.html">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-primary text-[16px]">terminal</span>
 <span class="font-metric-sm text-metric-sm text-primary group-hover:underline">Ouvrir le terminal complet</span>

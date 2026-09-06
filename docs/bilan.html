@@ -50,8 +50,8 @@
 <span class="material-symbols-outlined text-[15px] text-primary">precision_manufacturing</span>
 </div>
 <div>
-<div class="font-metric-display text-metric-display text-primary leading-none mb-1.5">78 %</div>
-<div class="font-metric-xs text-metric-xs text-on-surface-variant">sélections touchées (43/55)</div>
+<div id="b-hit" class="font-metric-display text-metric-display text-primary leading-none mb-1.5">—</div>
+<div class="font-metric-xs text-metric-xs text-on-surface-variant"><span id="b-hit-cap">sélections touchées</span></div>
 </div>
 </div>
 <!-- Card 2: 30D Simulated ROI -->
@@ -61,7 +61,7 @@
 <span class="material-symbols-outlined text-[15px] text-secondary">trending_up</span>
 </div>
 <div>
-<div class="font-metric-display text-metric-display text-secondary leading-none mb-1.5">+2.1 u</div>
+<div id="b-roi" class="font-metric-display text-metric-display text-secondary leading-none mb-1.5">—</div>
 <div class="font-metric-xs text-metric-xs text-on-surface-variant">ROI simulé sur 30 jours</div>
 </div>
 </div>
@@ -100,61 +100,7 @@
 <span class="font-metric-xs text-metric-xs">Moy. 76.1%</span>
 </div>
 </div>
-<!-- Monospace Columns Chart -->
-<div class="grid grid-cols-6 gap-2 pt-4 pb-2 items-end h-44 border-none bg-surface-container-low/60 rounded-lg px-3">
-<!-- Oct -->
-<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
-<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">76%</span>
-<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[76%]">
-<div class="w-full bg-primary h-full transition-all duration-700"></div>
-</div>
-<span class="font-metric-xs text-metric-xs text-outline uppercase">Oct</span>
-</div>
-<!-- Nov -->
-<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
-<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">81%</span>
-<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[81%]">
-<div class="w-full bg-primary h-full transition-all duration-700"></div>
-</div>
-<span class="font-metric-xs text-metric-xs text-outline uppercase">Nov</span>
-</div>
-<!-- Déc -->
-<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
-<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">79%</span>
-<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[79%]">
-<div class="w-full bg-primary h-full transition-all duration-700"></div>
-</div>
-<span class="font-metric-xs text-metric-xs text-outline uppercase">Déc</span>
-</div>
-<!-- Jan: Honest Loss Month -->
-<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
-<div class="flex items-center justify-center px-1 py-0.2 rounded bg-error/20">
-<span class="font-metric-xs text-metric-xs text-error font-bold">64%</span>
-</div>
-<div class="w-full bg-error/20 rounded-t-sm overflow-hidden flex items-end h-[64%]">
-<div class="w-full bg-error h-full transition-all duration-700"></div>
-</div>
-<span class="font-metric-xs text-metric-xs text-error uppercase font-bold">Jan</span>
-</div>
-<!-- Fév -->
-<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
-<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">77%</span>
-<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[77%]">
-<div class="w-full bg-primary h-full transition-all duration-700"></div>
-</div>
-<span class="font-metric-xs text-metric-xs text-outline uppercase">Fév</span>
-</div>
-<!-- Mar -->
-<div class="flex flex-col items-center gap-1.5 h-full justify-end group">
-<span class="font-metric-xs text-metric-xs text-on-surface-variant opacity-80 group-hover:opacity-100">80%</span>
-<div class="w-full bg-primary/20 rounded-t-sm overflow-hidden flex items-end h-[80%]">
-<div class="w-full bg-primary h-full transition-all duration-700"></div>
-</div>
-<span class="font-metric-xs text-metric-xs text-outline uppercase">Mar</span>
-</div>
-</div>
-<!-- Honest Disclaimer Caption -->
-<div class="flex items-center gap-2 mt-gutter-sm text-outline">
+<div id="z-mois" class="flex items-end justify-between gap-2 px-gutter-base" style="height:160px"></div><div class="flex items-center gap-2 mt-gutter-sm text-outline">
 <span class="material-symbols-outlined text-[16px] text-error">info</span>
 <span class="font-body-sm text-body-sm text-on-surface-variant italic">
         Le mois de janvier déficitaire est affiché sans filtre.
@@ -171,48 +117,7 @@
 <span class="font-metric-xs text-metric-xs text-outline tracking-tight">SÉLECTION PAR ODDS</span>
 </div>
 <div class="flex flex-col gap-gutter-md">
-<!-- Market 1: Under 2.5 -->
-<div class="flex flex-col gap-1.5">
-<div class="flex justify-between items-center font-metric-sm text-metric-sm">
-<span class="text-on-surface font-medium">Under 2.5</span>
-<span class="text-secondary font-bold">81 %</span>
-</div>
-<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
-<div class="h-full bg-secondary rounded-full" style="width: 81%"></div>
-</div>
-</div>
-<!-- Market 2: Double chance -->
-<div class="flex flex-col gap-1.5">
-<div class="flex justify-between items-center font-metric-sm text-metric-sm">
-<span class="text-on-surface font-medium">Double chance</span>
-<span class="text-secondary font-bold">88 %</span>
-</div>
-<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
-<div class="h-full bg-secondary rounded-full" style="width: 88%"></div>
-</div>
-</div>
-<!-- Market 3: Over 2.5 -->
-<div class="flex flex-col gap-1.5">
-<div class="flex justify-between items-center font-metric-sm text-metric-sm">
-<span class="text-on-surface font-medium">Over 2.5</span>
-<span class="text-primary-fixed-dim font-bold">74 %</span>
-</div>
-<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
-<div class="h-full bg-primary-fixed-dim rounded-full" style="width: 74%"></div>
-</div>
-</div>
-<!-- Market 4: 1X2 -->
-<div class="flex flex-col gap-1.5">
-<div class="flex justify-between items-center font-metric-sm text-metric-sm">
-<span class="text-on-surface font-medium">1X2 (Victoire sèche)</span>
-<span class="text-tertiary font-bold">62 %</span>
-</div>
-<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
-<div class="h-full bg-tertiary rounded-full" style="width: 62%"></div>
-</div>
-</div>
-</div>
-<!-- Threshold Legend -->
+<div id="z-marches" class="flex flex-col gap-gutter-md"></div><!-- Threshold Legend -->
 <div class="flex items-center justify-between pt-gutter-sm mt-gutter-sm border-t-0 bg-surface-container-low px-gutter-sm py-2 rounded-lg">
 <div class="flex items-center gap-1.5">
 <span class="w-2 h-2 rounded-full bg-secondary"></span>

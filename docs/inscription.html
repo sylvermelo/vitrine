@@ -37,7 +37,7 @@
 <div class="h-[1px] w-8 bg-surface-variant"></div>
 </div>
 <!-- Quant Registration Form -->
-<form class="flex flex-col gap-gutter-md mt-gutter-xs" onsubmit="event.preventDefault(); handleRegistration();">
+<form class="flex flex-col gap-gutter-md mt-gutter-xs" onsubmit="event.preventDefault();">
 <!-- Phone Module -->
 <div class="flex flex-col gap-1.5">
 <div class="flex justify-between items-center">
@@ -46,7 +46,7 @@
         </label>
 <span class="font-metric-xs text-metric-xs text-secondary flex items-center gap-1">
 <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-          PASSAGE DIRECT OTP
+          SANS CODE SMS
         </span>
 </div>
 <div class="flex items-center rounded-lg bg-surface-container shadow-sm overflow-hidden focus-within:bg-surface-container-high transition-colors">
@@ -58,7 +58,7 @@
 </button>
 <!-- Input Number Field -->
 <div class="relative flex-1 flex items-center min-w-0">
-<input class="w-full bg-transparent px-3 py-3.5 font-metric-md text-metric-md text-on-surface placeholder:text-outline/40 focus:outline-none" id="phone-input" inputmode="numeric" maxlength="11" placeholder="97 00 00 00" required="" type="tel"/>
+<input class="w-full bg-transparent px-3 py-3.5 font-metric-md text-metric-md text-on-surface placeholder:text-outline/40 focus:outline-none" id="phone-input" inputmode="numeric" maxlength="14" placeholder="01 97 48 29 46" required="" type="tel"/>
 <div class="mr-3 hidden items-center px-1.5 py-0.5 rounded bg-surface-variant" id="operator-indicator">
 <span class="font-label-micro text-label-micro text-primary uppercase" id="operator-label">MTN</span>
 </div>
@@ -76,7 +76,7 @@
 </div>
 <div class="relative flex items-center rounded-lg bg-surface-container shadow-sm overflow-hidden focus-within:bg-surface-container-high transition-colors">
 <span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">lock</span>
-<input class="w-full bg-transparent pl-10 pr-12 py-3.5 font-metric-lg text-metric-lg text-on-surface tracking-[0.3em] placeholder:tracking-normal placeholder:text-outline/40 focus:outline-none" id="pin-input" inputmode="numeric" maxlength="6" placeholder="••••••" required="" type="password"/>
+<input class="w-full bg-transparent pl-10 pr-12 py-3.5 font-metric-lg text-metric-lg text-on-surface tracking-[0.3em] placeholder:tracking-normal placeholder:text-outline/40 focus:outline-none" id="pin-input" placeholder="••••••" required="" type="password"/>
 <button aria-label="Afficher ou masquer le code" class="absolute right-2 p-1.5 text-outline hover:text-on-surface transition-colors flex items-center justify-center rounded" id="toggle-pin-visibility" type="button">
 <span class="material-symbols-outlined text-[20px]" id="pin-icon">visibility</span>
 </button>
@@ -108,7 +108,7 @@
 </label>
 <!-- Primary Action CTA -->
 <button class="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-bold shadow-md hover:brightness-105 active:scale-[0.99] transition-all" id="submit-cta" type="submit">
-<span>Recevoir le code OTP &amp; Créer mon compte</span>
+<span>Créer mon compte</span>
 <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
 </button>
 </form>
@@ -154,12 +154,12 @@
     // Interactive PIN strength meter
     if (pinInput && strengthBar && strengthLabel) {
       pinInput.addEventListener('input', (e) => {
-        const val = e.target.value.replace(/[^0-9]/g, '');
+        const val = e.target.value;
         e.target.value = val;
         const len = val.length;
         const pct = Math.min((len / 6) * 100, 100);
         strengthBar.style.width = pct + '%';
-        strengthLabel.textContent = len + '/6 DGT';
+        strengthLabel.textContent = len >= 6 ? 'OK (' + len + ')' : len + '/6 MIN';
         
         if (len === 6) {
           strengthBar.classList.remove('bg-primary-container');
@@ -179,7 +179,7 @@
     if (phoneInput && operatorIndicator && operatorLabel) {
       phoneInput.addEventListener('input', (e) => {
         let raw = e.target.value.replace(/\D/g, '');
-        if (raw.length > 8) raw = raw.substring(0, 8);
+        if (raw.length > 10) raw = raw.substring(0, 10);
         
         // Formatting 00 00 00 00
         let formatted = '';
@@ -191,7 +191,7 @@
 
         // Telephony carrier telemetry simulation
         if (raw.length >= 2) {
-          const prefix = raw.substring(0, 2);
+          const prefix = raw.replace(/^01/, '').substring(0, 2);
           operatorIndicator.classList.remove('hidden');
           operatorIndicator.classList.add('flex');
           
@@ -211,17 +211,5 @@
       });
     }
   })();
-
-  function handleRegistration() {
-    const cta = document.getElementById('submit-cta');
-    if (cta) {
-      cta.disabled = true;
-      cta.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>ÉMISSION OTP EN COURS...</span>';
-      setTimeout(() => {
-        cta.innerHTML = '<span class="material-symbols-outlined text-[18px]">done</span><span>OTP TRANSMIS PAR SMS</span>';
-        cta.classList.remove('bg-primary-container', 'text-on-primary-container');
-        cta.classList.add('bg-secondary', 'text-on-secondary');
-      }, 1200);
-    }
   }
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_-1px_8px_rgba(0,0,0,0.4)]" data-active-classes="text-primary-container"><div class="flex items-center justify-around h-16 px-gutter-xs"><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="accueil" href="index.html"><span class="material-symbols-outlined text-[22px]">home</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Accueil</span></a><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="selections" href="selections.html"><span class="material-symbols-outlined text-[22px]">format_list_bulleted</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Sélections</span></a><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="corners" href="corners.html"><span class="material-symbols-outlined text-[22px]">flag</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Corners</span></a><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="bilan" href="bilan.html"><span class="material-symbols-outlined text-[22px]">bar_chart</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Bilan</span></a><a class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="methode" href="acces.html"><span class="material-symbols-outlined text-[22px]">key</span><span class="font-label-micro text-label-micro mt-1 uppercase tracking-wider">Accès</span></a></div></nav><script src="assets/config.js"></script><script src="assets/app.js"></script><script>if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});</script></body></html>

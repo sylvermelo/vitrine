@@ -106,6 +106,91 @@ def assemble(src_nom, pub, cle):
         '<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">',
         '<div id="v-compte" role="button" style="cursor:pointer" title="Connexion" '
         'class="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">', 1)
+
+    # ---- PURGE DES MOCKS STITCH : aucune fausse donnée dans le HTML livré --
+    def coupe(debut, fin, rempl, depuis_fin=False):
+        nonlocal html
+        i = html.find(debut)
+        if i == -1:
+            return
+        j = html.find(fin, i)
+        if j == -1:
+            return
+        if depuis_fin:
+            j = html.rfind("<div", i, j)
+        html = html[:i] + rempl + html[j:]
+
+    if cle == "accueil":
+        i = html.find("<!-- Quantitative Rows -->")
+        j = html.find("Ouvrir le terminal complet")
+        if i != -1 and j != -1:
+            j = html.rfind("<a", i, j)
+            html = html[:i] + ('<div id="z-sel" class="divide-y '
+                               'divide-surface-container-low flex flex-col"></div>') + html[j:]
+    if cle == "selections":
+        coupe("<!-- Card 1: Upcoming", "<!-- Section Header: COMBINÉS",
+              '<div id="z-list"></div>')
+        i = html.find("COMBINÉS DU ROBOT")
+        if i != -1:
+            i = html.find("</div>", i) + 6
+            j = html.find("Taux réel")
+            if j != -1:
+                j = html.rfind("<div", i, j)
+                html = html[:i] + ('<div id="z-comb" class="flex flex-col '
+                                   'gap-gutter-sm"></div>') + html[j:]
+    if cle == "corners":
+        coupe("<!-- Step 01 -->", "<!-- Terminal Progression Tracker Bar -->",
+              '<div id="z-legs" class="flex flex-col gap-gutter-sm"></div>')
+        html = re.sub(r'<span([^>]*)>1\.85</span>',
+                      r'<span id="c-cote"\1>—</span>', html, count=1)
+        html = re.sub(r'<span([^>]*)>54 %</span>',
+                      r'<span id="c-proba"\1>—</span>', html, count=1)
+    if cle == "accueil":
+        html = re.sub(r'<span([^>]*)>78 %</span>',
+                      r'<span id="a-hit"\1>—</span>', html, count=1)
+    # ---- AUTH : format Bénin 01+8 chiffres, zéro valeur mock, zéro faux OTP
+    if cle == "connexion":
+        html = html.replace('value="97 42 88 19"', '')
+        html = html.replace('value="QUANTUM_KEY_2024"', '')
+        html = html.replace("loginInput.value = '97 42 88 19';", "loginInput.value = '';")
+        html = html.replace("loginInput.value = 'analyste.quant@pronosfoot.bj';",
+                            "loginInput.value = '';")
+        html = html.replace("placeholder=\"97 00 00 00\"", "placeholder=\"01 97 48 29 46\"")
+        html = html.replace("loginInput.placeholder = '97 00 00 00';",
+                            "loginInput.placeholder = '01 97 48 29 46';")
+    if cle == "inscription":
+        html = html.replace('maxlength="11" placeholder="97 00 00 00"',
+                            'maxlength="14" placeholder="01 97 48 29 46"')
+        html = html.replace("if (raw.length > 8) raw = raw.substring(0, 8);",
+                            "if (raw.length > 10) raw = raw.substring(0, 10);")
+        html = html.replace("const prefix = raw.substring(0, 2);",
+                            "const prefix = raw.replace(/^01/, '').substring(0, 2);")
+        html = html.replace("const val = e.target.value.replace(/[^0-9]/g, '');",
+                            "const val = e.target.value;")
+        html = html.replace("strengthLabel.textContent = len + '/6 DGT';",
+                            "strengthLabel.textContent = len >= 6 ? 'OK (' + len + ')' : len + '/6 MIN';")
+        html = re.sub(r'(<input[^>]*id="pin-input"[^>]*?)inputmode="numeric"\s*',
+                      r'\1', html)
+        html = re.sub(r'(<input[^>]*id="pin-input"[^>]*?)maxlength="\d+"\s*',
+                      r'\1', html)
+        html = re.sub(r'\n\s*function handleRegistration\(\) \{.*?\n\s*\}\s*\n',
+                      '\n', html, flags=re.S)
+        html = html.replace("Recevoir le code OTP &amp; Créer mon compte", "Créer mon compte")
+        html = html.replace("PASSAGE DIRECT OTP", "SANS CODE SMS")
+        html = html.replace('onsubmit="event.preventDefault(); handleRegistration();"',
+                            'onsubmit="event.preventDefault();"')
+    if cle == "bilan":
+        html = re.sub(r'<div([^>]*)>78 %</div>',
+                      r'<div id="b-hit"\1>—</div>', html, count=1)
+        html = re.sub(r'<div([^>]*)>\+2\.1 u</div>',
+                      r'<div id="b-roi"\1>—</div>', html, count=1)
+        html = html.replace("sélections touchées (43/55)",
+                            '<span id="b-hit-cap">sélections touchées</span>')
+        coupe("<!-- Monospace Columns Chart -->", "Le mois de janvier",
+              '<div id="z-mois" class="flex items-end justify-between gap-2 '
+              'px-gutter-base" style="height:160px"></div>', depuis_fin=True)
+        coupe("<!-- Market 1: Under 2.5 -->", "<!-- Threshold Legend -->",
+              '<div id="z-marches" class="flex flex-col gap-gutter-md"></div>')
     html = html.replace("</body>", FOOT_INJECT + "</body>", 1)
     with open(os.path.join(DOCS, pub), "w", encoding="utf-8") as f:
         f.write(html)
