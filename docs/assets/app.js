@@ -84,6 +84,26 @@
     if (main) main.prepend(b);
   }
 
+  /* Au retour d'une connexion Google, la session met un instant à
+     s'installer (jeton dans l'URL). Attendre la fin de la détection avant
+     de décider « pas connecté » — sinon la page redemande de se connecter
+     juste après un retour réussi. */
+  async function sessionPret() {
+    if (!SB) return;
+    try {
+      await new Promise((resolve) => {
+        let fini = false;
+        const term = () => { if (!fini) { fini = true;
+          try { sub.subscription.unsubscribe(); } catch (e) {}
+          resolve(); } };
+        const { data: sub } = SB.auth.onAuthStateChange((ev) => {
+          if (ev === "INITIAL_SESSION" || ev === "SIGNED_IN" || ev === "SIGNED_OUT") term();
+        });
+        setTimeout(term, 5000);            // filet : jamais bloqué plus de 5 s
+      });
+    } catch (e) {}
+  }
+
   /* Accès conseillé : session ouverte + abonnement actif en base. */
   async function accesOk() {
     if (!SB) return { ok: false, raison: "anon" };
@@ -614,6 +634,13 @@
   function etatSession() {
     const btn = document.getElementById("v-compte");
     if (!btn || !SB) return;
+    try {
+      SB.auth.onAuthStateChange((ev) => {
+        if (ev === "SIGNED_IN" || ev === "SIGNED_OUT") majBouton();
+      });
+    } catch (e) {}
+    majBouton();
+    function majBouton() {
     SB.auth.getSession().then(({ data }) => {
       if (data && data.session) {
         btn.title = "Se déconnecter (" + (data.session.user.email || "") + ")";
@@ -621,6 +648,7 @@
         btn.onclick = async () => { await SB.auth.signOut(); location.reload(); };
       } else btn.onclick = () => location.href = "connexion.html";
     });
+    }
   }
 
   /* ---------------------------------------------------------- démarrage */
@@ -645,6 +673,7 @@
       if (!SB) banniere("Connexion indisponible : clé publique Supabase absente de assets/config.js.");
       else pageAuth(PAGE);
     }
+    if (besoinAuth || besoinData) await sessionPret();
     if (besoinData) {
       const D = await charge();
       window.__ACC = await accesOk();
