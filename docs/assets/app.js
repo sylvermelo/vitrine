@@ -134,7 +134,12 @@
   const NOMBEAU = {
     safe: "SAFE DU JOUR", safe_weekend: "SAFE WEEK-END", risque: "COMBINÉ RISQUE",
     cote2: "COTE 2 DU JOUR", cote5: "COTE 5 DU JOUR", fun: "COMBINÉ FUN",
-    corners_montante: "COUPON CORNERS MONTANTE",
+    corners_montante: "COUPON CORNERS MONTANTE", safe_2: "SAFE 2 · RATTRAPAGE",
+  };
+  const nomBeau = (nom) => {
+    if (NOMBEAU[nom]) return NOMBEAU[nom];
+    const m = /^safe_(\d+)$/.exec(nom || "");
+    return m ? `SAFE ${m[1]} · RATTRAPAGE` : (nom || "").replace(/_/g, " ");
   };
 
   function ligneSelection(s) {
@@ -160,20 +165,34 @@
   }
 
   function carteCombine(c) {
-    const etat = c.touche == null
-      ? `<span class="${PILL}">EN ATTENTE</span>`
-      : c.touche
+    const jambesToutes = c.jambes || [];
+    const resolues = jambesToutes.filter((l) => l.resultat && l.resultat.touche != null);
+    const perdues = resolues.filter((l) => !l.resultat.touche).length;
+    const etat = c.touche != null
+      ? (c.touche
         ? `<span class="px-2 py-1 bg-secondary-container/30 text-secondary font-metric-xs text-metric-xs uppercase">✓ validé</span>`
-        : `<span class="px-2 py-1 bg-error-container/30 text-error font-metric-xs text-metric-xs uppercase">✗ perdu</span>`;
-    const jambes = (c.jambes || []).slice(0, 4).map((l) =>
-      `<div class="flex justify-between gap-2 font-metric-xs text-metric-xs text-on-surface-variant">
-         <span class="truncate">· ${esc(l.home)} vs ${esc(l.away)} — ${esc(l.option)}</span>
-         <span class="shrink-0">${l.p ? pct(l.p) : ""}</span></div>`).join("");
+        : `<span class="px-2 py-1 bg-error-container/30 text-error font-metric-xs text-metric-xs uppercase">✗ perdu</span>`)
+      : perdues
+        ? `<span class="px-2 py-1 bg-error-container/30 text-error font-metric-xs text-metric-xs uppercase">✗ perdu (${resolues.length}/${jambesToutes.length} jouées)</span>`
+        : resolues.length
+          ? `<span class="${PILL}">EN COURS ${resolues.length}/${jambesToutes.length}</span>`
+          : `<span class="${PILL}">EN ATTENTE</span>`;
+    const jambes = jambesToutes.slice(0, 10).map((l) => {
+      const r = l.resultat || {};
+      const verdict = r.touche == null ? "" :
+        ` <span class="${r.touche ? "text-secondary" : "text-error"} font-bold">${r.touche ? "✓" : "✗"} ${r.buts_home ?? ""}-${r.buts_away ?? ""}</span>`;
+      return `<div class="flex justify-between gap-2 font-metric-xs text-metric-xs text-on-surface-variant">
+         <span class="truncate">· ${esc(l.home)} vs ${esc(l.away)} — ${esc(l.option)}${verdict}</span>
+         <span class="shrink-0">${l.p ? pct(l.p) : ""}</span></div>`;
+    }).join("");
+    const origine = (c.brut && c.brut.origine)
+      ? `<div class="font-body-xs text-body-xs text-error border border-error-container/40 rounded-lg p-2">${esc(c.brut.origine)}</div>` : "";
     return `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
       <div class="flex items-center justify-between">
-        <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">${esc(NOMBEAU[c.nom] || (c.nom || "").replace(/_/g, " "))}</span>
+        <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">${esc(nomBeau(c.nom))}</span>
         ${etat}
       </div>
+      ${origine}
       <div class="flex items-end justify-between">
         <div><div class="font-metric-display text-metric-display text-on-surface leading-none">${f2(c.cote)}</div>
         <div class="font-metric-xs text-metric-xs text-on-surface-variant">cote totale</div></div>
