@@ -21,6 +21,10 @@
   .liens { display: flex; gap: 10px; margin-top: 6px; }
   .liens a { flex: 1; text-align: center; background: #262a34; color: #dfe2ef; padding: 12px; border-radius: 10px; text-decoration: none; font-size: 14px; }
   .petit { font-size: 12px; color: #859397; margin-top: 16px; }
+  .ligne-code { display: flex; gap: 10px; }
+  .ligne-code input { flex: 1; font-family: ui-monospace, monospace; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: #dfe2ef; background: #0f131c; border: 1px dashed #3c494c; border-radius: 10px; padding: 10px 14px; }
+  .ligne-code button { background: #262a34; color: #8aebff; font-weight: 700; font-size: 13px; padding: 10px 16px; border: 0; border-radius: 10px; cursor: pointer; }
+  .ok { color: #4ae176; } .ko { color: #ffb4ab; }
 </style>
 </head>
 <body>
@@ -31,8 +35,18 @@
   écris à l'administrateur sur WhatsApp, il active ton accès de <b style="color:#dfe2ef">30 jours</b>
   dès réception. Sans activation, les conseils restent verrouillés — l'historique et le bilan, eux, restent publics.</p>
   <div class="num" id="v-num">Numéro WhatsApp : chargement…</div>
-  <a class="wa off" id="v-wa" href="#">Ouvrir WhatsApp pour activer</a>
   <p id="v-id" style="display:none"></p>
+  <div style="border-top:1px solid #262a34;padding-top:14px">
+    <p style="margin-bottom:10px"><b style="color:#dfe2ef">Code promo / partenaire</b> —
+    si quelqu'un t'a donné un code, entre-le ici : il sera enregistré sur ton compte
+    (une seule fois, premier code déclaré gagne) et ajouté automatiquement au message WhatsApp.</p>
+    <div class="ligne-code">
+      <input id="v-code" placeholder="PF-XXXXX" autocomplete="off" autocapitalize="characters" maxlength="12">
+      <button id="v-code-btn">Enregistrer</button>
+    </div>
+    <p id="v-code-msg" class="petit" style="margin-top:8px"></p>
+  </div>
+  <a class="wa off" id="v-wa" href="#">Ouvrir WhatsApp pour activer</a>
 </div>
 <div class="liens">
   <a href="index.html">← Accueil</a>
@@ -49,11 +63,20 @@ Aucun conseil n'est garanti : les paris comportent un risque de perte. 18 ans et
   var num = String(cfg.WHATSAPP_ACTIVATION || "").replace(/[^0-9]/g, "");
   var elNum = document.getElementById("v-num");
   var wa = document.getElementById("v-wa");
+  var codeEl = document.getElementById("v-code");
+  var codeMsg = document.getElementById("v-code-msg");
+  var idCourant = null;
+  var params = new URLSearchParams(location.search);
+  if (params.get("code")) codeEl.value = params.get("code").toUpperCase().slice(0, 12);
   var joli = num ? "+" + num.slice(0, 3) + " " + num.slice(3, 5) + " " + num.slice(5) : "";
-  function message(id) {
-    return "Bonjour, je veux activer mon compte PRONOS FOOT." + (id ? " Mon identifiant : " + id : "");
+  function codeActuel() { return (codeEl.value || "").trim().toUpperCase(); }
+  function message() {
+    var t = "Bonjour, je veux activer mon compte PRONOS FOOT.";
+    if (idCourant) t += " Mon identifiant : " + idCourant;
+    if (codeActuel()) t += " Mon code promo : " + codeActuel();
+    return t;
   }
-  function branche(id) {
+  function brancheWa() {
     if (!num || num === "AREMPLIR") {
       elNum.textContent = "Numéro WhatsApp en cours de configuration — revenez bientôt.";
       wa.classList.add("off");
@@ -61,26 +84,52 @@ Aucun conseil n'est garanti : les paris comportent un risque de perte. 18 ans et
     }
     elNum.textContent = "WhatsApp administrateur : " + joli;
     wa.classList.remove("off");
-    wa.href = "https://wa.me/" + num + "?text=" + encodeURIComponent(message(id));
+    wa.href = "https://wa.me/" + num + "?text=" + encodeURIComponent(message());
   }
-  branche(null);
-  /* pré-remplit l'identifiant du compte connecté (e-mail ou numéro) */
+  brancheWa();
+  codeEl.addEventListener("input", brancheWa);   /* le message WhatsApp suit le code */
+
+  var sb = null;
   try {
-    if (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase) {
-      var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-      sb.auth.getSession().then(function (r) {
-        var u = r.data && r.data.session && r.data.session.user;
-        if (!u) return;
-        var m = /^t(229\d{10})@tel\.pronos-foot\.bj$/.exec(u.email || "");
-        var id = m ? "+" + m[1].slice(0, 3) + " " + m[1].slice(3) : (u.email || "");
-        var p = document.getElementById("v-id");
-        p.style.display = "block";
-        p.innerHTML = "Ton compte : <b style=\"color:#dfe2ef\"></b>";
-        p.querySelector("b").textContent = id;
-        branche(id);
-      }).catch(function () {});
-    }
+    if (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase)
+      sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
   } catch (e) {}
+
+  function direCode(txt, ok) {
+    codeMsg.textContent = txt;
+    codeMsg.className = "petit " + (ok ? "ok" : "ko");
+    codeMsg.style.marginTop = "8px";
+  }
+  async function enregistrer(silencieux) {
+    var code = codeActuel();
+    if (!code || !sb) return;
+    try {
+      var r = await sb.rpc("declarer_code_promo", { p_code: code });
+      if (r.data === "ok") direCode("Code promo enregistré ✓ — ton parrain sera crédité.", true);
+      else if (r.data === "deja") direCode("Ton compte a déjà un code promo enregistré.", true);
+      else if (r.data === "invalide") direCode("Code inconnu ou désactivé — vérifie auprès de ton parrain. Il reste dans le message WhatsApp.", false);
+      else if (!silencieux) direCode("Connexion requise pour enregistrer le code — il reste dans le message WhatsApp.", false);
+    } catch (e) {
+      if (!silencieux) direCode("Enregistrement impossible pour l'instant — le code reste dans le message WhatsApp.", false);
+    }
+  }
+  document.getElementById("v-code-btn").onclick = function () { enregistrer(false); };
+
+  /* compte connecté : affiche l'identifiant et enregistre le code transmis */
+  if (sb) {
+    sb.auth.getSession().then(function (r) {
+      var u = r.data && r.data.session && r.data.session.user;
+      if (!u) return;
+      var m = /^t(229\d{10})@tel\.pronos-foot\.bj$/.exec(u.email || "");
+      idCourant = m ? "+" + m[1].slice(0, 3) + " " + m[1].slice(3) : (u.email || "");
+      var p = document.getElementById("v-id");
+      p.style.display = "block";
+      p.innerHTML = "Ton compte : <b style=\"color:#dfe2ef\"></b>";
+      p.querySelector("b").textContent = idCourant;
+      brancheWa();
+      if (codeActuel()) enregistrer(true);
+    }).catch(function () {});
+  }
 })();
 </script>
 </body>

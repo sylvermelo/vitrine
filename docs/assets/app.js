@@ -574,6 +574,46 @@
     const msg = document.createElement("div");
     msg.className = "mt-gutter-sm font-body-sm text-body-sm text-primary px-gutter-base";
     if (bouton) bouton.parentElement.appendChild(msg);
+    /* Code promo (parrainage vendeur) : case à cocher + champ. */
+    let promoWrap = null;
+    if (bouton) {
+      promoWrap = document.createElement("div");
+      promoWrap.className = "mt-gutter-base px-gutter-base flex flex-col gap-gutter-sm";
+      promoWrap.innerHTML = `<label class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant" style="cursor:pointer">
+          <input id="v-promo-ok" type="checkbox"> J'ai un code promo</label>
+        <input id="v-promo" type="text" placeholder="ex. PF-7K9QM" autocomplete="off"
+          autocapitalize="characters" style="display:none"
+          class="w-full bg-surface-container-low rounded-lg px-gutter-base py-2.5 font-metric-xs text-metric-xs text-on-surface outline-none">
+        <div id="v-promo-msg" class="font-body-xs text-body-xs text-on-surface-variant"></div>`;
+      bouton.parentElement.insertBefore(promoWrap, bouton);
+      const pOk = promoWrap.querySelector("#v-promo-ok");
+      const pIn = promoWrap.querySelector("#v-promo");
+      pOk.onchange = () => {
+        pIn.style.display = pOk.checked ? "block" : "none";
+        if (pOk.checked) pIn.focus();
+      };
+    }
+    const codePromo = () => {
+      if (!promoWrap || !promoWrap.querySelector("#v-promo-ok").checked) return "";
+      return (promoWrap.querySelector("#v-promo").value || "").trim().toUpperCase();
+    };
+    async function declarerPromo() {
+      const code = codePromo();
+      const mm = promoWrap && promoWrap.querySelector("#v-promo-msg");
+      if (!code) return null;
+      try {
+        const r = await SB.rpc("declarer_code_promo", { p_code: code });
+        const st = r.data;
+        if (mm) mm.textContent = st === "ok" ? "Code promo enregistré ✓ — ton parrain sera crédité."
+          : st === "deja" ? "Ton compte a déjà un code promo enregistré."
+          : st === "invalide" ? "Code promo inconnu ou désactivé — non enregistré."
+          : "Code non enregistré pour l'instant — tu pourrais le ressaisir sur la page d'activation.";
+        return st;
+      } catch (e) {
+        if (mm) mm.textContent = "Code promo non enregistré pour l'instant — ressaisis-le sur la page d'activation.";
+        return null;
+      }
+    }
     const google = [...document.querySelectorAll("main button")]
       .find((b) => /Google/i.test(b.textContent || ""));
     if (google) google.onclick = async () => {
@@ -617,7 +657,8 @@
     bouton.onclick = async (e) => {
       e.preventDefault();
       msg.textContent = "…";
-      const coche = document.querySelector("main input[type=checkbox]");
+      const coche = document.getElementById("terms-checkbox") ||
+        document.querySelector("main input[type=checkbox]:not(#v-promo-ok)");
       if (mode === "inscription" && coche && !coche.checked) {
         msg.textContent = "Coche la certification (18 ans + conditions) d'abord.";
         return;
@@ -631,9 +672,10 @@
         if (mode === "connexion") {
           const r = await SB.auth.signInWithPassword({ email: idf.email, password: mdp.value });
           if (r.error) throw r.error;
+          await declarerPromo();
           msg.textContent = idf.tel ? "Connecté avec le " + idf.tel.slice(0, 3) + " " + idf.tel.slice(3) + "."
             : "Connecté — retour à l'accueil.";
-          setTimeout(() => location.href = "index.html", 700);
+          setTimeout(() => location.href = "index.html", 900);
         } else {
           const r = await SB.auth.signUp({
             email: idf.email, password: mdp.value,
@@ -641,8 +683,11 @@
           });
           if (r.error) throw r.error;
           if (r.data.session) {
+            await declarerPromo();
             msg.textContent = "Compte créé — dernière étape : l'activation.";
-            setTimeout(() => location.href = "activation.html", 900);
+            const cp = codePromo();
+            setTimeout(() => location.href =
+              "activation.html" + (cp ? "?code=" + encodeURIComponent(cp) : ""), 1100);
           } else if (idf.tel) {
             msg.textContent = "Compte créé, mais la confirmation e-mail est encore active côté serveur — " +
               "avec un numéro de téléphone tu ne pourras pas la recevoir. Réglage à faire : " +
