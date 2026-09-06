@@ -265,9 +265,13 @@
     const h = hier();
     const selHier = D.sel.filter((s) => s.jour === h && s.touche != null);
     const tHier = selHier.filter((s) => s.touche).length;
-    const safes = D.comb.filter((c) => estSafe(c) && c.touche != null);
+    /* « SAFE » = le SAFE DU JOUR uniquement (nom exact). Le SAFE WEEK-END et
+       le SAFE 2 sont des produits distincts : les mélanger fausse les
+       compteurs (bug du 06/09 : week-end manqué affiché à la place du jour). */
+    const safes = D.comb.filter((c) => c.nom === "safe" && c.touche != null);
     const tSafe = safes.filter((c) => c.touche).length;
-    const safeHier = D.comb.find((c) => c.jour === h && estSafe(c));
+    const safeHier = D.comb.find((c) => c.jour === h && c.nom === "safe");
+    const safe2Hier = D.comb.find((c) => c.jour === h && c.nom === "safe_2");
 
     let blocSafe;
     if (safeHier) {
@@ -284,9 +288,12 @@
           <span class="truncate">· ${esc(l.home)} vs ${esc(l.away)} — ${esc(l.option)}${etat}</span>
           <span class="shrink-0">${l.p ? pct(l.p) : ""}</span></div>`;
       }).join("");
+      const l2 = safe2Hier
+        ? `<div class="font-body-xs text-body-xs ${safe2Hier.touche == null ? "text-on-surface-variant" : safe2Hier.touche ? "text-secondary" : "text-error"}">SAFE 2 · rattrapage : ${safe2Hier.touche == null ? "en cours" : safe2Hier.touche ? "✓ passé" : "✗ manqué"}</div>`
+        : "";
       blocSafe = `<div class="flex items-center justify-between gap-2">
           <span class="font-headline-md text-headline-md text-on-surface">SAFE du ${esc(dateFr(h))}</span>${v}</div>
-        <div class="flex flex-col gap-1">${jambes}</div>`;
+        <div class="flex flex-col gap-1">${jambes}</div>${l2}`;
     } else {
       blocSafe = `<div class="font-headline-md text-headline-md text-on-surface">Pas de SAFE hier</div>
         <div class="font-body-xs text-body-xs text-on-surface-variant">Le robot s'abstient quand la qualité n'y est pas — c'est aussi ça, la discipline.</div>`;

@@ -43,6 +43,10 @@ HEAD_INJECT = (
     '<link rel="icon" type="image/png" href="assets/icons-192.png">'
     '<style>'
     'html{background:#0a0e17;}'
+    # PWA autonome : la barre fixe est plus haute que 64px à cause de la
+    # barre d'état iPhone — contenu et sous-en-tête collant suivent.
+    'main.pt-16{padding-top:calc(4rem + env(safe-area-inset-top,0px));}'
+    '.sticky.top-16{top:calc(4rem + env(safe-area-inset-top,0px));}'
     '@media (min-width:640px){'
     'body{max-width:560px;margin:0 auto;box-shadow:0 0 60px rgba(0,0,0,.6);}'
     'header.fixed,nav.fixed{max-width:560px;left:50%;transform:translateX(-50%);}'
