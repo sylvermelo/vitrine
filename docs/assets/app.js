@@ -187,7 +187,7 @@
       SB = SB || window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
       const [sel, comb] = await Promise.all([
         SB.from("selections").select("*").order("jour", { ascending: false }).limit(400),
-        SB.from("combines").select("*").order("jour", { ascending: false }).limit(120),
+        SB.from("combines").select("*").order("jour", { ascending: false }).limit(500),
       ]);
       if (sel.error) throw sel.error;
       if (comb.error) throw comb.error;
@@ -202,6 +202,63 @@
   /* ---------------------------------------------------------- pages */
   const CARTE = /rounded-xl/;
   const LIGNE = /p-gutter-base/;
+
+  const hier = () => new Date(Date.now() + 3600000 - 86400000).toISOString().slice(0, 10);
+  const dateFr = (j) => { try {
+    return new Date(j + "T12:00:00Z").toLocaleDateString("fr-FR",
+      { weekday: "long", day: "numeric", month: "long" });
+  } catch (e) { return j; } };
+  const estSafe = (c) => (c.nom || "").toLowerCase().includes("safe");
+
+  /* Carte « HIER » : résultat du SAFE de la veille, conseils touchés la
+     veille, SAFE passés depuis le lancement. Données 100 % réelles (tables
+     selections/combines) — si rien n'est archivé, la carte le dit. */
+  function carteVeille(D) {
+    const h = hier();
+    const selHier = D.sel.filter((s) => s.jour === h && s.touche != null);
+    const tHier = selHier.filter((s) => s.touche).length;
+    const safes = D.comb.filter((c) => estSafe(c) && c.touche != null);
+    const tSafe = safes.filter((c) => c.touche).length;
+    const safeHier = D.comb.find((c) => c.jour === h && estSafe(c));
+
+    let blocSafe;
+    if (safeHier) {
+      const v = safeHier.touche == null
+        ? `<span class="${PILL}">EN ATTENTE</span>`
+        : safeHier.touche
+          ? `<span class="px-2 py-1 bg-secondary-container/30 text-secondary font-metric-xs text-metric-xs uppercase">✓ passé</span>`
+          : `<span class="px-2 py-1 bg-error-container/30 text-error font-metric-xs text-metric-xs uppercase">✗ manqué</span>`;
+      const jambes = (safeHier.jambes || []).slice(0, 4).map((l) => {
+        const r = l.resultat || {};
+        const etat = r.touche == null ? "" :
+          ` <span class="${r.touche ? "text-secondary" : "text-error"}">${r.touche ? "✓" : "✗"} ${r.buts_home ?? ""}-${r.buts_away ?? ""}</span>`;
+        return `<div class="flex justify-between gap-2 font-metric-xs text-metric-xs text-on-surface-variant">
+          <span class="truncate">· ${esc(l.home)} vs ${esc(l.away)} — ${esc(l.option)}${etat}</span>
+          <span class="shrink-0">${l.p ? pct(l.p) : ""}</span></div>`;
+      }).join("");
+      blocSafe = `<div class="flex items-center justify-between gap-2">
+          <span class="font-headline-md text-headline-md text-on-surface">SAFE du ${esc(dateFr(h))}</span>${v}</div>
+        <div class="flex flex-col gap-1">${jambes}</div>`;
+    } else {
+      blocSafe = `<div class="font-headline-md text-headline-md text-on-surface">Pas de SAFE hier</div>
+        <div class="font-body-xs text-body-xs text-on-surface-variant">Le robot s'abstient quand la qualité n'y est pas — c'est aussi ça, la discipline.</div>`;
+    }
+
+    const compteur = (gros, petit, sous) => `<div class="bg-surface-container p-gutter-sm rounded-lg flex flex-col">
+      <span class="font-metric-display text-metric-lg text-primary leading-none">${gros}</span>
+      <span class="font-label-micro text-label-micro text-on-surface-variant uppercase tracking-wider mt-gutter-xs">${petit}</span>
+      <span class="font-metric-xs text-metric-xs text-on-surface-variant">${sous}</span></div>`;
+
+    const pcHier = selHier.length ? Math.round(100 * tHier / selHier.length) + " %" : "—";
+    const pcSafe = safes.length ? Math.round(100 * tSafe / safes.length) + " % de réussite" : "archive vide";
+    return `<div id="z-veille" class="mx-gutter-base mt-gutter-sm rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
+      <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">Résultats d'hier · ${esc(h)}</span>
+      ${blocSafe}
+      <div class="grid grid-cols-2 gap-gutter-sm">
+        ${compteur(selHier.length ? `${tHier}/${selHier.length}` : "—", "Conseils touchés hier", pcHier)}
+        ${compteur(safes.length ? `${tSafe}/${safes.length}` : "—", "SAFE passés depuis le lancement", pcSafe)}
+      </div></div>`;
+  }
 
   function pageAccueil(D) {
     const auj = aujourdHui();
@@ -225,6 +282,16 @@
       const t = Math.round(100 * touches / resolues.length) + " %";
       if (!setTexte("a-hit", t)) majTexte("78 %", t, true);
     }
+    /* carte « HIER » : insérée sous la grille des 3 stats */
+    const vieille = document.getElementById("z-veille");
+    if (vieille) vieille.remove();
+    const ancre = document.getElementById("a-hit");
+    const grille = ancre && ancre.closest(".grid");
+    const carte = document.createElement("div");
+    carte.innerHTML = carteVeille(D);
+    const noeud = carte.firstElementChild;
+    if (grille && grille.parentElement) grille.insertAdjacentElement("afterend", noeud);
+    else { const m = document.querySelector("main"); if (m) m.prepend(noeud); }
     majTexte("Source ESPN", `source ESPN · ${touches}/${resolues.length} vérifiées`);
   }
 
