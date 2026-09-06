@@ -118,6 +118,8 @@
       if (z1) z1.innerHTML = carteVerrou(raison);
       const z2 = zone("z-comb", "SAFE DU JOUR", CARTE);
       if (z2) z2.innerHTML = "";
+      const t = document.getElementById("v-tabs"); if (t) t.style.display = "none";
+      const ch = document.getElementById("z-chips"); if (ch) ch.style.display = "none";
     } else {
       const z = zone("z-legs", "Aston Villa vs Wolves", CARTE);
       if (z) { z.className = "flex flex-col gap-gutter-sm"; z.innerHTML = carteVerrou(raison); }
@@ -129,6 +131,11 @@
   /* ---------------------------------------------------------- gabarits */
   const PILL = "px-2 py-1 bg-surface-container-highest text-primary font-metric-xs " +
     "text-metric-xs tracking-wider uppercase whitespace-nowrap";
+  const NOMBEAU = {
+    safe: "SAFE DU JOUR", safe_weekend: "SAFE WEEK-END", risque: "COMBINÉ RISQUE",
+    cote2: "COTE 2 DU JOUR", cote5: "COTE 5 DU JOUR", fun: "COMBINÉ FUN",
+    corners_montante: "COUPON CORNERS MONTANTE",
+  };
 
   function ligneSelection(s) {
     const verdict = s.touche == null ? "" :
@@ -164,7 +171,7 @@
          <span class="shrink-0">${l.p ? pct(l.p) : ""}</span></div>`).join("");
     return `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
       <div class="flex items-center justify-between">
-        <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">${esc((c.nom || "").replace(/_/g, " "))}</span>
+        <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">${esc(NOMBEAU[c.nom] || (c.nom || "").replace(/_/g, " "))}</span>
         ${etat}
       </div>
       <div class="flex items-end justify-between">
@@ -297,36 +304,62 @@
 
   function pageSelections(D) {
     const auj = aujourdHui();
-    const jours = [...new Set(D.sel.map((s) => s.jour))].sort().reverse();
+    const jours = [...new Set(D.sel.map((s) => s.jour).concat(D.comb.map((c) => c.jour)))]
+      .filter(Boolean).sort().reverse();
     let jour = jours.find((j) => j >= auj) || jours[0] || auj;
+    let onglet = "conseils";
     const zListe = zone("z-list", "Liverpool", CARTE);
     const zComb = zone("z-comb", "SAFE DU JOUR", CARTE);
-    const rend = () => {
-      if (zListe) {
-        const sels = D.sel.filter((s) => s.jour === jour).sort((a, b) => (b.p || 0) - (a.p || 0));
-        zListe.innerHTML = sels.length
-          ? `<div class="divide-y divide-surface-container-low flex flex-col rounded-xl overflow-hidden bg-surface-container-low">${sels.map(ligneSelection).join("")}</div>`
-          : `<div class="rounded-xl bg-surface-container-low p-gutter-base font-body-sm text-body-sm text-on-surface-variant">Aucune sélection ce jour-là — le robot s'abstient quand la qualité n'y est pas.</div>`;
-      }
-      if (zComb) {
-        const combs = D.comb.filter((c) => c.jour === jour && c.nom !== "corners_montante");
-        zComb.innerHTML = combs.length
-          ? `<div class="flex flex-col gap-gutter-sm">${combs.map(carteCombine).join("")}</div>`
-          : `<div class="font-body-xs text-body-xs text-on-surface-variant">Pas de combiné archivé ce jour.</div>`;
-      }
-    };
-    rend();
-    if (zListe) {
-      const chips = document.createElement("div");
-      chips.className = "flex gap-2 overflow-x-auto pb-gutter-sm";
-      const pose = () => {
-        chips.innerHTML = jours.slice(0, 12).map((j) =>
-          `<button data-j="${j}" class="px-3 py-1.5 rounded-lg font-metric-xs text-metric-xs whitespace-nowrap ${j === jour ? "bg-primary-container text-on-primary-container" : "bg-surface-container-high text-on-surface-variant"}">${j === auj ? "AUJOURD'HUI" : j}</button>`).join("");
-        chips.querySelectorAll("button").forEach((b) => b.onclick = () => { jour = b.dataset.j; pose(); rend(); });
+    const zChips = document.getElementById("z-chips");
+    const tabs = [...document.querySelectorAll("#v-tabs [data-tab]")];
+    const TAB_ACT = "filter-tab py-1.5 rounded text-center font-label-micro text-label-micro " +
+      "uppercase tracking-wider transition-all bg-surface-container-highest text-primary font-bold shadow-sm";
+    const TAB_INA = "filter-tab py-1.5 rounded text-center font-label-micro text-label-micro " +
+      "uppercase tracking-wider transition-all text-outline hover:text-on-surface font-semibold";
+    const combsJour = (filtre) => D.comb.filter((c) => c.jour === jour &&
+      c.nom !== "corners_montante" && filtre(c));
+    const carteVide = (txt) => `<div class="rounded-xl bg-surface-container-low p-gutter-base ` +
+      `font-body-sm text-body-sm text-on-surface-variant">${txt}</div>`;
+    function rend() {
+      tabs.forEach((b) => { b.className = b.dataset.tab === onglet ? TAB_ACT : TAB_INA; });
+      const n = {
+        conseils: D.sel.filter((s) => s.jour === jour).length,
+        safe: combsJour((c) => /safe/.test((c.nom || "").toLowerCase())).length,
+        cote2: combsJour((c) => c.nom === "cote2").length,
+        cote5: combsJour((c) => c.nom === "cote5").length,
       };
-      pose();
-      zListe.parentElement.prepend(chips);
+      const LIB = { conseils: "Conseils", safe: "SAFE", cote2: "Cote 2", cote5: "Cote 5" };
+      tabs.forEach((b) => {
+        const k = b.dataset.tab;
+        b.textContent = n[k] ? `${LIB[k]} (${n[k]})` : LIB[k];
+      });
+      if (zListe) zListe.innerHTML = "";
+      if (zComb) zComb.innerHTML = "";
+      if (onglet === "conseils") {
+        const sels = D.sel.filter((s) => s.jour === jour).sort((a, b) => (b.p || 0) - (a.p || 0));
+        if (zListe) zListe.innerHTML = sels.length
+          ? `<div class="divide-y divide-surface-container-low flex flex-col rounded-xl overflow-hidden bg-surface-container-low">${sels.map(ligneSelection).join("")}</div>`
+          : carteVide("Aucune sélection ce jour-là — le robot s'abstient quand la qualité n'y est pas.");
+      } else {
+        const filtre = onglet === "safe"
+          ? (c) => /safe/.test((c.nom || "").toLowerCase())
+          : (c) => c.nom === onglet;
+        const cs = combsJour(filtre).sort((a, b) => (b.p_combine || 0) - (a.p_combine || 0));
+        if (zComb) zComb.innerHTML = cs.length
+          ? cs.map(carteCombine).join("")
+          : carteVide(onglet === "safe"
+            ? `Aucun SAFE le ${jour} — le robot s'abstient quand la qualité n'y est pas.`
+            : `Aucun combiné « ${LIB[onglet]} » le ${jour}.`);
+      }
+      if (zChips) {
+        zChips.innerHTML = jours.slice(0, 14).map((j) =>
+          `<button data-j="${j}" class="px-3 py-1.5 rounded-lg font-metric-xs text-metric-xs whitespace-nowrap ${j === jour ? "bg-primary-container text-on-primary-container" : "bg-surface-container-high text-on-surface-variant"}">${j === auj ? "AUJOURD'HUI" : j.slice(5)}</button>`).join("");
+        zChips.querySelectorAll("button").forEach((b) =>
+          b.onclick = () => { jour = b.dataset.j; rend(); });
+      }
     }
+    tabs.forEach((b) => b.onclick = () => { onglet = b.dataset.tab; rend(); });
+    rend();
   }
 
   function pageCorners(D) {
@@ -485,6 +518,15 @@
         await SB.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname.replace(/[^/]*$/, "") + "index.html" } });
       } catch (e) { msg.textContent = "Google : à activer côté Supabase (Auth → Providers)."; }
     };
+    const main_ = document.querySelector("main");
+    if (main_ && !document.getElementById("v-legaux")) {
+      const liens = document.createElement("div");
+      liens.id = "v-legaux";
+      liens.className = "mt-gutter-base mb-gutter-sm px-gutter-base font-body-xs text-body-xs text-center text-on-surface-variant";
+      liens.innerHTML = 'En continuant, tu acceptes nos <a href="conditions.html" class="underline">conditions d\'utilisation</a> ' +
+        'et notre <a href="confidentialite.html" class="underline">politique de confidentialité</a>.';
+      main_.appendChild(liens);
+    }
     if (mode === "connexion" && bouton) {
       const wrap = document.createElement("div");
       wrap.className = "mt-gutter-base flex flex-col gap-gutter-sm px-gutter-base";

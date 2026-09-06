@@ -118,6 +118,26 @@ def assemble(src_nom, pub, cle):
             return
         if depuis_fin:
             j = html.rfind("<div", i, j)
+        # rééquilibrage : la zone coupée doit contenir autant de <div> que de
+        # </div>, sinon on avale/oublie la fermeture du conteneur parent.
+        for _ in range(8):
+            seg = html[i:j]
+            o = len(re.findall(r"<div\b", seg))
+            c = len(re.findall(r"</div>", seg))
+            if c > o:
+                # fermetures en trop : elles ferment un conteneur ouvert AVANT
+                # la zone -> on les laisse en place en reculant la fin de coupe
+                k = html.rfind("</div>", i, j)
+                if k == -1:
+                    break
+                j = k
+            elif o > c:
+                k = html.find("</div>", j)
+                if k == -1:
+                    break
+                j = k + 6
+            else:
+                break
         html = html[:i] + rempl + html[j:]
 
     if cle == "accueil":
@@ -128,11 +148,37 @@ def assemble(src_nom, pub, cle):
             html = html[:i] + ('<div id="z-sel" class="divide-y '
                                'divide-surface-container-low flex flex-col"></div>') + html[j:]
     if cle == "selections":
+        coupe("<!-- Horizontal Date Chips -->", "<!-- Segmented Filter Control -->",
+              '<div id="z-chips" class="flex gap-2 overflow-x-auto pb-gutter-sm"></div>')
+        TAB = ("filter-tab py-1.5 rounded text-center font-label-micro "
+               "text-label-micro uppercase tracking-wider transition-all")
+        ACT = TAB + " bg-surface-container-highest text-primary font-bold shadow-sm"
+        INA = TAB + " text-outline hover:text-on-surface font-semibold"
+        onglets = "".join(
+            f'<button class="{ACT if k == "conseils" else INA}" data-tab="{k}">{lab}</button>'
+            for k, lab in [("conseils", "Conseils"), ("safe", "SAFE"),
+                           ("cote2", "Cote 2"), ("cote5", "Cote 5")])
+        coupe("<!-- Segmented Filter Control -->", "<!-- Main Feed Area -->",
+              '<div class="grid grid-cols-4 bg-surface-container-low p-0.5 '
+              f'rounded-lg" id="v-tabs">{onglets}</div>')
         coupe("<!-- Card 1: Upcoming", "<!-- Section Header: COMBINÉS",
               '<div id="z-list"></div>')
-        i = html.find("COMBINÉS DU ROBOT")
+        def fin_div(pos):
+            # pos = juste après '<div' ; renvoie l'index juste après le </div> apparié
+            d, k = 1, pos
+            while d and k < len(html):
+                no, nf = html.find("<div", k), html.find("</div>", k)
+                if nf == -1:
+                    break
+                if no != -1 and no < nf:
+                    d += 1; k = no + 4
+                else:
+                    d -= 1; k = nf + 6
+            return k
+        i = html.find("<!-- Section Header: COMBINÉS")
         if i != -1:
-            i = html.find("</div>", i) + 6
+            ouv = html.find("<div", i)
+            i = fin_div(ouv + 4)          # après la VRAIE fin du bloc titre
             j = html.find("Taux réel")
             if j != -1:
                 j = html.rfind("<div", i, j)

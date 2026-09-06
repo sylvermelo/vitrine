@@ -5,6 +5,7 @@ const CACHE = "vitrine-v3";
 const COQUILLE = [
   "./", "./index.html", "./selections.html", "./corners.html", "./bilan.html",
   "./acces.html", "./connexion.html", "./inscription.html", "./paiement.html",
+  "./confidentialite.html", "./conditions.html",
   "./assets/app.js", "./assets/config.js", "./assets/manifest.webmanifest",
   "./assets/icons-192.png", "./assets/icons-512.png", "./assets/logo.png",
 ];
