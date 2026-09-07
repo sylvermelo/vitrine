@@ -530,19 +530,190 @@
   }
 
   /* ---------------------------------------------------------- auth */
-  /* Téléphone Bénin SANS OTP : le compte est un e-mail technique dérivé du
-     numéro (t22901XXXXXXXX@tel.pronos-foot.bj). L'utilisateur ne voit que son
-     numéro + son mot de passe. Nécessite "Confirm email" OFF côté Supabase. */
-  function normTel(v) {
-    const d = String(v || "").replace(/[\s.\-()]/g, "");
-    const m = d.match(/^(?:\+?229)?(01\d{8})$/);
-    return m ? "229" + m[1] : null;
+  /* Téléphone SANS OTP : le compte est un e-mail technique dérivé du numéro
+     (t<indicatif><numéro>@tel.pronos-foot.bj, ex. t2290197482946@...).
+     L'utilisateur ne voit que son numéro + son mot de passe.
+     Nécessite "Confirm email" OFF côté Supabase.
+     PAYS_AFRIQUE : [drapeau, nom, indicatif, min chiffres, max chiffres, préfixe?]
+     (chiffres du numéro national, sans l'indicatif pays ; préfixe = motif
+     RegExp optionnel que le numéro national doit respecter). */
+  const PAYS_AFRIQUE = [
+    ["🇧🇯", "Bénin", "229", 10, 10, "^01"],
+    ["🇩🇿", "Algérie", "213", 9, 9],
+    ["🇦🇴", "Angola", "244", 9, 9],
+    ["🇿🇦", "Afrique du Sud", "27", 9, 9],
+    ["🇧🇼", "Botswana", "267", 7, 8],
+    ["🇧🇫", "Burkina Faso", "226", 8, 8],
+    ["🇧🇮", "Burundi", "257", 8, 8],
+    ["🇨🇲", "Cameroun", "237", 8, 9],
+    ["🇨🇻", "Cap-Vert", "238", 7, 7],
+    ["🇨🇫", "Centrafrique", "236", 8, 8],
+    ["🇰🇲", "Comores", "269", 7, 7],
+    ["🇨🇬", "Congo-Brazzaville", "242", 9, 9],
+    ["🇨🇩", "Congo-Kinshasa (RDC)", "243", 7, 9],
+    ["🇨🇮", "Côte d'Ivoire", "225", 10, 10, "^0"],
+    ["🇩🇯", "Djibouti", "253", 8, 8],
+    ["🇪🇬", "Égypte", "20", 10, 10],
+    ["🇪🇷", "Érythrée", "291", 7, 7],
+    ["🇸🇿", "Eswatini", "268", 8, 8],
+    ["🇪🇹", "Éthiopie", "251", 9, 9],
+    ["🇬🇦", "Gabon", "241", 7, 8],
+    ["🇬🇲", "Gambie", "220", 7, 7],
+    ["🇬🇭", "Ghana", "233", 9, 9],
+    ["🇬🇳", "Guinée", "224", 8, 8],
+    ["🇬🇼", "Guinée-Bissau", "245", 7, 7],
+    ["🇬🇶", "Guinée équatoriale", "240", 9, 9],
+    ["🇰🇪", "Kenya", "254", 9, 9],
+    ["🇱🇸", "Lesotho", "266", 8, 8],
+    ["🇱🇷", "Liberia", "231", 7, 9],
+    ["🇱🇾", "Libye", "218", 9, 9],
+    ["🇲🇬", "Madagascar", "261", 9, 9],
+    ["🇲🇼", "Malawi", "265", 7, 9],
+    ["🇲🇱", "Mali", "223", 8, 8],
+    ["🇲🇦", "Maroc", "212", 9, 9],
+    ["🇲🇷", "Mauritanie", "222", 8, 8],
+    ["🇲🇺", "Maurice", "230", 7, 8],
+    ["🇲🇿", "Mozambique", "258", 8, 9],
+    ["🇳🇦", "Namibie", "264", 8, 9],
+    ["🇳🇪", "Niger", "227", 8, 8],
+    ["🇳🇬", "Nigeria", "234", 10, 10],
+    ["🇺🇬", "Ouganda", "256", 9, 9],
+    ["🇷🇼", "Rwanda", "250", 9, 9],
+    ["🇷🇪", "Réunion", "262", 9, 9],
+    ["🇸🇹", "Sao Tomé-et-Principe", "239", 7, 7],
+    ["🇸🇳", "Sénégal", "221", 9, 9],
+    ["🇸🇨", "Seychelles", "248", 6, 7],
+    ["🇸🇱", "Sierra Leone", "232", 8, 8],
+    ["🇸🇴", "Somalie", "252", 7, 9],
+    ["🇸🇩", "Soudan", "249", 9, 9],
+    ["🇸🇸", "Soudan du Sud", "211", 9, 9],
+    ["🇹🇿", "Tanzanie", "255", 9, 9],
+    ["🇹🇩", "Tchad", "235", 8, 8],
+    ["🇹🇬", "Togo", "228", 8, 8],
+    ["🇹🇳", "Tunisie", "216", 8, 8],
+    ["🇿🇲", "Zambie", "260", 9, 9],
+    ["🇿🇼", "Zimbabwe", "263", 7, 9],
+  ];
+  let paysSel = PAYS_AFRIQUE[0];
+  function paysParCc(dd) {
+    for (const L of [3, 2, 1]) {
+      const p = PAYS_AFRIQUE.find((x) => x[2] === dd.slice(0, L));
+      if (p) return p;
+    }
+    return null;
+  }
+  function nsnOk(p, n) { return n.length >= p[3] && n.length <= p[4]; }
+  /* Retourne "<cc><numéro>" ou null. Accepte le 0 initial (préfixe national)
+     sauf quand il fait partie du numéro (Bénin 01…, Côte d'Ivoire 0…). */
+  function normTelPays(p, brut) {
+    let n = String(brut || "").replace(/[\s.\-()]/g, "").replace(/^\+/, "");
+    if (n.length > p[2].length && n.startsWith(p[2])) n = n.slice(p[2].length);
+    const valide = (x) => nsnOk(p, x) && (!p[5] || new RegExp(p[5]).test(x));
+    if (valide(n)) return p[2] + n;
+    const s = n.replace(/^0+/, "");
+    if (s !== n && valide(s)) return p[2] + s;
+    return null;
   }
   function identifiant(v) {
-    const t = normTel(v);
-    if (t) return { email: "t" + t + "@tel.pronos-foot.bj", tel: t, ok: true };
-    const e = String(v || "").trim().toLowerCase();
+    const br = String(v || "").trim();
+    const dg = br.replace(/[\s.\-()]/g, "");
+    /* Raccourci Bénin : seulement si « 229 » explicite ou pays sélectionné = Bénin
+       (sinon collision avec les numéros ivoiriens 01/05/07 à 10 chiffres). */
+    const t229 = dg.match(/^\+?229(01\d{8})$/) ||
+      (paysSel && paysSel[2] === "229" ? dg.match(/^(01\d{8})$/) : null);
+    if (t229) return { email: "t229" + t229[1] + "@tel.pronos-foot.bj", tel: "229" + t229[1], ok: true };
+    if (/^\+?\d{6,}$/.test(dg)) {
+      let p = paysSel;
+      if (dg.startsWith("+")) { const q = paysParCc(dg.replace(/\D/g, "")); if (q) p = q; }
+      const t = normTelPays(p, dg);
+      if (t) return { email: "t" + t + "@tel.pronos-foot.bj", tel: t, ok: true };
+      return { email: "", tel: null, ok: false,
+        msg: "Numéro " + p[1] + " (+" + p[2] + ") attendu : " +
+          (p[3] === p[4] ? p[3] + " chiffres" : p[3] + " à " + p[4] + " chiffres") +
+          (p[2] === "229" ? " (ex. 01 97 48 29 46)" : "") + "." };
+    }
+    const e = br.toLowerCase();
     return { email: e, tel: null, ok: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) };
+  }
+  /* Sélecteur de pays (feuille modale avec recherche). */
+  function ouvreSelecteurPays(cb) {
+    if (document.getElementById("v-pays-modal")) return;
+    const ov = document.createElement("div");
+    ov.id = "v-pays-modal";
+    ov.className = "fixed inset-0 z-[90] bg-black/70 flex items-end sm:items-center justify-center";
+    ov.innerHTML = `<div class="w-full sm:max-w-sm bg-surface-container-high rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col p-3 gap-2 shadow-2xl">
+        <div class="font-label-micro text-label-micro uppercase tracking-widest text-outline px-1">Choisir le pays (indicatif)</div>
+        <input id="v-pays-q" type="text" placeholder="Rechercher un pays ou un indicatif…" autocomplete="off"
+          class="w-full bg-surface-container-lowest rounded-lg px-3 py-2.5 font-body-sm text-body-sm text-on-surface outline-none">
+        <div id="v-pays-liste" class="overflow-y-auto flex flex-col gap-0.5"></div></div>`;
+    document.body.appendChild(ov);
+    const liste = ov.querySelector("#v-pays-liste");
+    const q = ov.querySelector("#v-pays-q");
+    const ferme = () => ov.remove();
+    const dessine = (filtre) => {
+      const f = (filtre || "").trim().toLowerCase();
+      const fd = f.replace(/\D/g, "");
+      liste.innerHTML = "";
+      PAYS_AFRIQUE
+        .filter((p) => !f || p[1].toLowerCase().includes(f) || (fd && p[2].startsWith(fd)))
+        .forEach((p) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-surface-container-lowest" +
+            (p === paysSel ? " bg-surface-container-lowest" : "");
+          b.innerHTML = `<span class="text-xl leading-none">${p[0]}</span>
+            <span class="flex-1 font-body-sm text-body-sm text-on-surface truncate">${p[1]}</span>
+            <span class="font-metric-sm text-metric-sm text-primary">+${p[2]}</span>`;
+          b.onclick = () => { paysSel = p; ferme(); if (cb) cb(p); };
+          liste.appendChild(b);
+        });
+    };
+    ov.addEventListener("click", (e) => { if (e.target === ov) ferme(); });
+    q.addEventListener("input", () => dessine(q.value));
+    dessine("");
+    setTimeout(() => q.focus(), 60);
+  }
+  /* Branche le bouton pays + le formatage du champ téléphone de la page. */
+  function initPays() {
+    const btn = document.getElementById("country-toggle") || document.getElementById("prefix-display");
+    const maj = () => {
+      if (btn) btn.innerHTML =
+        `<span class="text-base leading-none">${paysSel[0]}</span>` +
+        `<span class="font-metric-sm text-metric-sm text-on-surface font-semibold">+${paysSel[2]}</span>` +
+        `<span class="material-symbols-outlined text-[14px] text-outline">expand_more</span>`;
+      const hint = document.getElementById("phone-hint");
+      if (hint) hint.textContent = paysSel[1] + " (+" + paysSel[2] + ") — numéro à " +
+        (paysSel[3] === paysSel[4] ? paysSel[3] + " chiffres" : paysSel[3] + " à " + paysSel[4] + " chiffres") +
+        (paysSel[2] === "229" ? " (ex. 01 97 48 29 46)" : "");
+      const oi = document.getElementById("operator-indicator");
+      if (oi && paysSel[2] !== "229") { oi.classList.add("hidden"); oi.classList.remove("flex"); }
+    };
+    if (btn) btn.onclick = (e) => { e.preventDefault(); ouvreSelecteurPays(maj); };
+    maj();
+    const inp = document.getElementById("phone-input") || document.getElementById("login-input");
+    if (inp && !inp.dataset.paysBranch) {
+      inp.dataset.paysBranch = "1";
+      inp.addEventListener("input", () => {
+        if (inp.type === "email" || inp.value.includes("@")) return; /* mode e-mail : ne pas formater */
+        let raw = inp.value.replace(/\D/g, "");
+        const max = Math.max(paysSel[3], paysSel[4]) + 1;   /* +1 : tolérance 0 initial */
+        if (raw.length > max) raw = raw.slice(0, max);
+        let f = "";
+        for (let i = 0; i < raw.length; i++) { if (i > 0 && i % 2 === 0) f += " "; f += raw[i]; }
+        if (inp.value !== f) inp.value = f;
+        const oi = document.getElementById("operator-indicator");
+        const ol = document.getElementById("operator-label");
+        if (oi && ol) {
+          if (paysSel[2] === "229" && raw.length >= 4) {
+            const p2 = raw.replace(/^01/, "").substring(0, 2);
+            oi.classList.remove("hidden"); oi.classList.add("flex");
+            ol.textContent = ["96","97","61","62","51","52","53","54"].includes(p2) ? "MTN"
+              : ["95","94","64","65"].includes(p2) ? "MOOV"
+              : ["40","41","42","43","44","45"].includes(p2) ? "CELTIIS" : "GSM";
+          } else { oi.classList.add("hidden"); oi.classList.remove("flex"); }
+        }
+      });
+    }
   }
   function msgErreur(e) {
     const m = String((e && e.message) || e);
@@ -554,19 +725,48 @@
     return m;
   }
   function pageAuth(mode) {
-    let email = document.querySelector("main input[type=email]") ||
-      document.querySelector("main input[type=tel], main input[inputmode=tel], main input[inputmode=numeric]");
-    if (email) {
-      email.type = "text";
-      email.inputMode = "email";
-      email.placeholder = "e-mail ou +229 01 XX XX XX XX";
-      email.removeAttribute("maxlength");
-      email.autocomplete = "username";
-      const lab = feuilleParTexte("ADRESSE E-MAIL") || feuilleParTexte("CANAL NUMÉRIQUE (+229)") ||
-        feuilleParTexte("NUMÉRO TERMINAL GSM") || feuilleParTexte("E-MAIL");
-      if (lab) lab.textContent = "E-MAIL OU NUMÉRO (+229)";
-      const aide = feuilleParTexte("OTP SMS : bientôt");
-      if (aide) aide.textContent = "Pas de code SMS : ton numéro + ton mot de passe suffisent.";
+    const onglets = document.getElementById("tab-email") && document.getElementById("panel-email");
+    let email = null;
+    let lireIdf = null;
+    if (onglets) {
+      /* Formulaire d'inscription v2 : onglets E-mail / Téléphone + pays. */
+      let actif = "tel";
+      const tabE = document.getElementById("tab-email");
+      const tabT = document.getElementById("tab-phone");
+      const panE = document.getElementById("panel-email");
+      const panT = document.getElementById("panel-phone");
+      const emailIn = document.getElementById("email-input");
+      const phoneIn = document.getElementById("phone-input");
+      const CLS_ON = "py-2 text-center rounded font-headline-sm text-metric-sm bg-surface-container-high text-primary shadow-xs transition-all";
+      const CLS_OFF = "py-2 text-center rounded font-headline-sm text-metric-sm text-on-surface-variant hover:text-on-surface transition-all";
+      const majOnglets = () => {
+        tabE.className = actif === "email" ? CLS_ON : CLS_OFF;
+        tabT.className = actif === "tel" ? CLS_ON : CLS_OFF;
+        panE.style.display = actif === "email" ? "flex" : "none";
+        panT.style.display = actif === "tel" ? "flex" : "none";
+      };
+      tabE.onclick = () => { actif = "email"; majOnglets(); if (emailIn) emailIn.focus(); };
+      tabT.onclick = () => { actif = "tel"; majOnglets(); if (phoneIn) phoneIn.focus(); };
+      majOnglets();
+      initPays();
+      email = phoneIn || emailIn;
+      lireIdf = () => identifiant(actif === "email" ? (emailIn || {}).value : (phoneIn || {}).value);
+    } else {
+      email = document.querySelector("main input[type=email]") ||
+        document.querySelector("main input[type=tel], main input[inputmode=tel], main input[inputmode=numeric]");
+      if (email) {
+        email.type = "text";
+        email.inputMode = "email";
+        email.placeholder = "e-mail ou numéro de téléphone";
+        email.removeAttribute("maxlength");
+        email.autocomplete = "username";
+        const lab = feuilleParTexte("ADRESSE E-MAIL") || feuilleParTexte("CANAL NUMÉRIQUE") ||
+          feuilleParTexte("NUMÉRO TERMINAL GSM") || feuilleParTexte("E-MAIL");
+        if (lab) lab.textContent = "E-MAIL OU NUMÉRO";
+        const aide = feuilleParTexte("OTP SMS : bientôt");
+        if (aide) aide.textContent = "Pas de code SMS : ton numéro + ton mot de passe suffisent.";
+      }
+      initPays();   /* page connexion : bouton pays sur le préfixe */
     }
     const mdp = document.querySelector("main input[type=password]");
     const bouton = [...document.querySelectorAll("main button, main a")]
@@ -663,9 +863,9 @@
         msg.textContent = "Coche la certification (18 ans + conditions) d'abord.";
         return;
       }
-      const idf = identifiant(email.value);
+      const idf = lireIdf ? lireIdf() : identifiant(email.value);
       if (!idf.ok) {
-        msg.textContent = "Numéro béninois attendu : 229 01 + 8 chiffres (ex. 01 97 48 29 46), ou une adresse e-mail.";
+        msg.textContent = idf.msg || "Identifiant invalide : adresse e-mail ou numéro de téléphone attendu.";
         return;
       }
       try {
@@ -717,11 +917,15 @@
       });
     }
     const afficheId = (email) => {
-      const m = /^t(229)(01\d{8})@tel\.pronos-foot\.bj$/.exec(email || "");
+      const m = /^t(\d{7,16})@tel\.pronos-foot\.bj$/.exec(email || "");
       if (!m) return email || "";
-      const d = m[2];
-      return "+229 " + d.slice(0, 2) + " " + d.slice(2, 4) + " " + d.slice(4, 6) + " " +
-        d.slice(6, 8) + " " + d.slice(8);
+      const n = m[1];
+      const p = paysParCc(n);
+      const cc = p ? p[2] : "";
+      const d = cc ? n.slice(cc.length) : n;
+      let s = "";
+      for (let i = 0; i < d.length; i++) { if (i > 0 && i % 2 === 0) s += " "; s += d[i]; }
+      return (cc ? "+" + cc + " " : "+") + s;
     };
     const dateFin = (f) => { try {
       return new Date(f + "T12:00:00Z").toLocaleDateString("fr-FR",

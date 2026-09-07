@@ -33,7 +33,7 @@
 <div class="flex flex-col bg-surface-container-low rounded p-gutter-base space-y-gutter-base shadow-sm">
 <div class="grid grid-cols-2 p-0.5 rounded bg-surface-container-lowest">
 <button class="py-2 text-center rounded font-headline-sm text-metric-sm bg-surface-container-high text-primary shadow-xs transition-all" id="tab-phone" type="button">
-        Téléphone (Bénin)
+        Téléphone
       </button>
 <button class="py-2 text-center rounded font-headline-sm text-metric-sm text-on-surface-variant hover:text-on-surface transition-all" id="tab-email" type="button">
         Email
@@ -43,17 +43,19 @@
 <div class="flex flex-col space-y-1.5">
 <div class="flex items-center justify-between">
 <label class="font-label-micro text-label-micro text-outline uppercase tracking-wider" id="input-label">
-            CANAL NUMÉRIQUE (+229)
+            CANAL NUMÉRIQUE
           </label>
 <span class="font-metric-xs text-metric-xs text-secondary flex items-center gap-1">
 <span class="inline-block w-1 h-1 rounded-full bg-secondary"></span> ACTIF
           </span>
 </div>
 <div class="relative flex items-center">
-<span class="absolute left-3 font-metric-md text-metric-md text-primary select-none" id="prefix-display">
-            +229
-          </span>
-<input class="w-full h-11 pl-16 pr-3 bg-surface-container-lowest rounded font-metric-md text-metric-md text-on-surface placeholder:text-outline-variant focus:outline-none focus:bg-surface-container-high transition-colors" id="login-input" placeholder="97 00 00 00" type="tel" value="97 42 88 19"/>
+<button type="button" id="prefix-display" class="absolute left-1.5 flex items-center gap-1 px-2 py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors z-10">
+<span class="text-base leading-none">🇧🇯</span>
+<span class="font-metric-sm text-metric-sm font-semibold">+229</span>
+<span class="material-symbols-outlined text-[14px] text-outline">expand_more</span>
+</button>
+<input class="w-full h-11 pl-24 pr-3 bg-surface-container-lowest rounded font-metric-md text-metric-md text-on-surface placeholder:text-outline-variant focus:outline-none focus:bg-surface-container-high transition-colors" id="login-input" placeholder="97 00 00 00" type="tel" value="97 42 88 19"/>
 </div>
 </div>
 <div class="flex flex-col space-y-1.5">
@@ -129,10 +131,10 @@
       currentMode = 'phone';
       tabPhone.className = 'py-2 text-center rounded font-headline-sm text-metric-sm bg-surface-container-high text-primary shadow-xs transition-all';
       tabEmail.className = 'py-2 text-center rounded font-headline-sm text-metric-sm text-on-surface-variant hover:text-on-surface transition-all';
-      inputLabel.textContent = 'CANAL NUMÉRIQUE (+229)';
+      inputLabel.textContent = 'CANAL NUMÉRIQUE';
       prefixDisplay.classList.remove('hidden');
       loginInput.classList.remove('pl-3');
-      loginInput.classList.add('pl-16');
+      loginInput.classList.add('pl-24');
       loginInput.type = 'tel';
       loginInput.placeholder = '97 00 00 00';
       loginInput.value = '97 42 88 19';
@@ -145,7 +147,7 @@
       tabPhone.className = 'py-2 text-center rounded font-headline-sm text-metric-sm text-on-surface-variant hover:text-on-surface transition-all';
       inputLabel.textContent = 'ADRESSE EMAIL OPÉRATEUR';
       prefixDisplay.classList.add('hidden');
-      loginInput.classList.remove('pl-16');
+      loginInput.classList.remove('pl-24');
       loginInput.classList.add('pl-3');
       loginInput.type = 'email';
       loginInput.placeholder = 'analyste@pronosfoot.bj';

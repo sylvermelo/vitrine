@@ -120,8 +120,19 @@ Aucun conseil n'est garanti : les paris comportent un risque de perte. 18 ans et
     sb.auth.getSession().then(function (r) {
       var u = r.data && r.data.session && r.data.session.user;
       if (!u) return;
-      var m = /^t(229\d{10})@tel\.pronos-foot\.bj$/.exec(u.email || "");
-      idCourant = m ? "+" + m[1].slice(0, 3) + " " + m[1].slice(3) : (u.email || "");
+      var m = /^t(\d{7,16})@tel\.pronos-foot\.bj$/.exec(u.email || "");
+      if (m) {
+        var CC = ["213","244","229","267","226","257","237","238","236","269","242","243","225","253","20","240","291","268","251","241","220","233","224","245","254","266","231","218","261","265","223","212","222","230","258","264","227","234","256","250","262","239","221","248","232","252","27","211","249","255","228","216","260","263"];
+        var n = m[1], cc = "";
+        for (var k = 0; k < CC.length; k++) {
+          if (n.indexOf(CC[k]) === 0 && (!cc || CC[k].length > cc.length)) cc = CC[k];
+        }
+        var d = cc ? n.slice(cc.length) : n, s2 = "";
+        for (var i = 0; i < d.length; i++) { if (i > 0 && i % 2 === 0) s2 += " "; s2 += d[i]; }
+        idCourant = "+" + (cc || "") + (cc ? " " : "") + s2;
+      } else {
+        idCourant = u.email || "";
+      }
       var p = document.getElementById("v-id");
       p.style.display = "block";
       p.innerHTML = "Ton compte : <b style=\"color:#dfe2ef\"></b>";
