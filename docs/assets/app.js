@@ -874,7 +874,15 @@
           const r = await SB.auth.signInWithPassword({ email: idf.email, password: mdp.value });
           if (r.error) throw r.error;
           await declarerPromo();
-          msg.textContent = idf.tel ? "Connecté avec le " + idf.tel.slice(0, 3) + " " + idf.tel.slice(3) + "."
+          const fmtTel = (t) => {
+            const p = paysParCc(t);
+            const cc = p ? p[2] : "";
+            const d = cc ? t.slice(cc.length) : t;
+            let x = "";
+            for (let i = 0; i < d.length; i++) { if (i > 0 && i % 2 === 0) x += " "; x += d[i]; }
+            return "+" + cc + (cc ? " " : "") + x;
+          };
+          msg.textContent = idf.tel ? "Connecté avec le " + fmtTel(idf.tel) + "."
             : "Connecté — retour à l'accueil.";
           setTimeout(() => location.href = "index.html", 900);
         } else {
