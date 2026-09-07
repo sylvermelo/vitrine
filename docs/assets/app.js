@@ -721,7 +721,8 @@
     if (/already been registered|already registered/i.test(m))
       return "Ce numéro (ou e-mail) a déjà un compte — passe par la page Connexion.";
     if (/password should be at least/i.test(m)) return "Mot de passe trop court : 6 caractères minimum.";
-    if (/email rate limit/i.test(m)) return "Trop de tentatives — réessaie dans une minute.";
+    if (/email rate limit|over_email_send_rate_limit/i.test(m))
+      return "Inscriptions momentanément bloquées : le serveur a dépassé sa limite d'envoi d'e-mails de confirmation. Réessaie dans 1 heure (ou préviens l'administrateur sur WhatsApp).";
     return m;
   }
   function pageAuth(mode) {
