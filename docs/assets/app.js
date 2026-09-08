@@ -231,19 +231,30 @@
       banniere("Vitrine non connectée : clé publique Supabase absente de assets/config.js.");
       return null;
     }
-    try {
-      SB = SB || window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
-      const [sel, comb] = await Promise.all([
-        SB.from("selections").select("*").order("jour", { ascending: false }).limit(400),
-        SB.from("combines").select("*").order("jour", { ascending: false }).limit(500),
-      ]);
-      if (sel.error) throw sel.error;
-      if (comb.error) throw comb.error;
-      return { sel: sel.data || [], comb: comb.data || [] };
-    } catch (e) {
-      banniere("Lecture Supabase refusée ou injoignable : colle les politiques RLS " +
-        "(supabase/rls_vitrine.sql du repo robot) dans le SQL Editor, puis recharge.");
-      return null;
+    /* Réessais (demande utilisateur 09/09) : une connexion mobile capricieuse
+       ou un serveur Supabase lent ne doivent PLUS afficher le message d'erreur
+       du premier coup — on tente 3 fois (attente ~1 s puis ~2 s) avant de se
+       plaindre. */
+    const ESSAIS = 3;
+    for (let essai = 1; essai <= ESSAIS; essai++) {
+      try {
+        SB = SB || window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+        const [sel, comb] = await Promise.all([
+          SB.from("selections").select("*").order("jour", { ascending: false }).limit(400),
+          SB.from("combines").select("*").order("jour", { ascending: false }).limit(500),
+        ]);
+        if (sel.error) throw sel.error;
+        if (comb.error) throw comb.error;
+        return { sel: sel.data || [], comb: comb.data || [] };
+      } catch (e) {
+        if (essai === ESSAIS) {
+          banniere("Lecture Supabase impossible après " + ESSAIS + " tentatives : " +
+            "vérifiez la connexion, ou collez les politiques RLS " +
+            "(supabase/rls_vitrine.sql du repo robot) dans le SQL Editor, puis rechargez.");
+          return null;
+        }
+        await new Promise((r) => setTimeout(r, 900 * essai));
+      }
     }
   }
 
