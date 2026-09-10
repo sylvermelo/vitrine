@@ -518,6 +518,11 @@
           (fichier robot injoignable). Réessayez dans quelques minutes.</div>`;
         return;
       }
+      const liste = (S.matchs || []).length
+        ? { titre: "Matchs du jour — " + (S.jour || ""), matchs: S.matchs }
+        : (S.prochain_jour && (S.prochain_jour.matchs || []).length)
+          ? { titre: "Prochain jour — " + S.prochain_jour.date + " (ceux du jour sont déjà commencés)", matchs: S.prochain_jour.matchs }
+          : { titre: "Matchs du jour — " + (S.jour || ""), matchs: [] };
       const nonOui = (x) => x == null ? `<span class="mut">—</span>`
         : `<b class="ink2 num">${pct(1 - x)}</b><div class="tiny mut">oui ${pct(x)}</div>`;
       const ligne = (m) => `<tr>
@@ -555,12 +560,12 @@
           buts d'affilée (même équipe, sans but adverse entre-temps), biais mesurés puis corrigés sur
           2 923 matchs réels (2 saisons, 5 grands championnats). <b>NON</b> = la série ne se produit
           pas. Aucun bookmaker de nos sources ne propose ces marchés : rien dans le coupon ni le suivi.</div>
-        <div class="card"><div class="hd"><span class="lbl">Matchs du jour — ${esc(S.jour || "")}</span>
-          <span class="pill cy">${(S.matchs || []).length}</span></div>
-          ${(S.matchs || []).length ? `<div class="scrollx"><table class="tbl"><thead><tr>
+        <div class="card"><div class="hd"><span class="lbl">${esc(liste.titre)}</span>
+          <span class="pill cy">${liste.matchs.length}</span></div>
+          ${liste.matchs.length ? `<div class="scrollx"><table class="tbl"><thead><tr>
             <th>H</th><th>Match</th><th class="n">2·match</th><th class="n">3·match</th>
             <th class="n">2·dom</th><th class="n">2·ext</th></tr></thead>
-            <tbody>${S.matchs.map(ligne).join("")}</tbody></table></div>
+            <tbody>${liste.matchs.map(ligne).join("")}</tbody></table></div>
             <div class="tiny mut" style="margin-top:6px">Chiffre gras = NON (la série n'arrive pas) ;
             dessous = oui. Hors Big 5 ou coupes : affiché, jamais dans le safe ni le combiné.</div>`
           : `<div class="small mut">Aucun match aujourd'hui dans le calendrier du robot.</div>`}
