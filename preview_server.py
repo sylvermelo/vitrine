@@ -10,8 +10,8 @@ ROOT = "/home/user"
 class H(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         clean = path.split("?")[0]
-        if clean == "/pronos-foot/series_jour.json":
-            return "/home/user/pronos-foot/data/series_jour.json"
+        if clean.startswith("/pronos-foot/") and clean.endswith(".json"):
+            return "/home/user/pronos-foot/data/" + clean.rsplit("/", 1)[1]
         if clean.startswith("/vitrine/"):
             return super().translate_path("/vitrine/docs/" + clean[len("/vitrine/"):])
         if clean in ("/", "/vitrine", "/vitrine/"):

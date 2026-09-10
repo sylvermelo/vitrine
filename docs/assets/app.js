@@ -127,7 +127,7 @@
     return `<div class="lock">
       <div class="ic">🔒</div>
       <h2 style="margin:8px 0 6px">Contenu abonnés</h2>
-      <div class="small ink2">${esc(raison || "Les conseils du jour — sélections, combinés, coupon corners — sont réservés aux abonnés.")}</div>
+      <div class="small ink2">${esc(raison || "Les conseils du jour — sélections, combinés, choix exotiques — sont réservés aux abonnés.")}</div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
         <a class="btn" href="activation.html">Activer via WhatsApp</a>
         <a class="btn ghost" href="connexion.html">J'ai déjà un compte</a>
@@ -137,7 +137,7 @@
   function verrou(page) {
     const m = document.getElementById("z-contenu") || document.querySelector("main");
     if (m) m.innerHTML = carteVerrou(window.__ACC && window.__ACC.raison === "sans-abonnement"
-      ? "Sélections, combinés et coupon corners sont réservés aux abonnés actifs (30 jours)."
+      ? "Sélections, combinés et choix exotiques sont réservés aux abonnés actifs (30 jours)."
       : undefined);
   }
 
@@ -160,32 +160,56 @@
       </div></div>`;
   }
 
-  function carteCombine(c) {
+  /* Case détaillée d'un match (disposition utilisateur 11/09) : équipes
+     jamais coupées, score EN DESSOUS dans la case, prédiction, puis résultat.
+     Cotes = issues des calculs du robot (cote juste), jamais d'un bookmaker. */
+  function caseLeg(l) {
+    const r = l.resultat || {};
+    const resolu = r.touche != null;
+    const score = (r.buts_home != null && r.buts_away != null)
+      ? `${r.buts_home} \u2013 ${r.buts_away}` : "";
+    const verdict = !resolu
+      ? `<span class="pill mu">en attente</span>`
+      : r.touche ? `<span class="pill em">\u2713 touch\u00e9</span>`
+                 : `<span class="pill rd">\u2717 manqu\u00e9</span>`;
+    const cote = l.cote_juste != null ? l.cote_juste : (l.p ? 1 / l.p : null);
+    return `<div class="case">
+      <div class="case-h"><span class="tiny mut">${esc(l.heure || "")}${l.ligue || l.div ? " \u00b7 " + esc(String(l.ligue || l.div)) : ""}</span>${verdict}</div>
+      <div class="case-t"><span class="team" title="${esc(l.home)}">${esc(l.home)}</span>
+        <span class="mut tiny">vs</span>
+        <span class="team" title="${esc(l.away)}">${esc(l.away)}</span></div>
+      ${score ? `<div class="case-score">${score}</div>` : ""}
+      <div class="case-p"><span class="chip">${esc(l.option)}</span>
+        ${l.p ? `<span class="pct em" style="font-family:var(--f-disp);font-weight:800">${pct(l.p)}</span>` : ""}
+        ${cote ? `<span class="tiny mut">cote juste <b class="ink2 num">${f2(cote)}</b></span>` : ""}</div>
+    </div>`;
+  }
+
+  function carteCombine(c, titre) {
     const jambes = c.jambes || [];
     const resolues = jambes.filter((l) => l.resultat && l.resultat.touche != null);
     const perdues = resolues.filter((l) => !l.resultat.touche).length;
     const etat = c.touche != null
-      ? (c.touche ? `<span class="pill em">✓ validé</span>` : `<span class="pill rd">✗ perdu</span>`)
-      : perdues ? `<span class="pill rd">✗ perdu (${resolues.length}/${jambes.length})</span>`
+      ? (c.touche ? `<span class="pill em">\u2713 valid\u00e9</span>` : `<span class="pill rd">\u2717 perdu</span>`)
+      : perdues ? `<span class="pill rd">\u2717 perdu (${resolues.length}/${jambes.length})</span>`
       : resolues.length ? `<span class="pill am">en cours ${resolues.length}/${jambes.length}</span>`
       : `<span class="pill mu">en attente</span>`;
-    const lignes = jambes.slice(0, 10).map((l) => {
-      const r = l.resultat || {};
-      const v = r.touche == null ? "" :
-        ` <b class="${r.touche ? "em" : "rd"}">${r.touche ? "✓" : "✗"} ${r.buts_home ?? ""}-${r.buts_away ?? ""}</b>`;
-      return `<div class="mrow"><div class="l"><div class="t small" title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
-        <div class="tiny mut">${esc(l.option)}${v}</div></div>
-        <div class="r">${l.p ? `<span class="pct small em">${pct(l.p)}</span>` : ""}</div></div>`;
-    }).join("");
-    const origine = (c.brut && c.brut.origine) ? `<div class="err small" style="margin-bottom:8px">${esc(c.brut.origine)}</div>` : "";
+    const origine = (c.brut && c.brut.origine)
+      ? `<div class="err small" style="margin:8px 0 0">${esc(c.brut.origine)}</div>` : "";
     return `<div class="card">
-      <div class="hd"><span class="lbl ind">${esc(nomBeau(c.nom))}</span>${etat}</div>
-      ${origine}
+      <div class="hd"><span class="lbl ind">${esc(titre || nomBeau(c.nom))}</span>${etat}</div>
       <div class="kpis" style="grid-template-columns:1fr 1fr">
-        <div class="kpi"><div class="v num">${f2(c.cote)}</div><div class="d">cote totale</div></div>
-        <div class="kpi"><div class="v num cy">${pct(c.p_combine)}</div><div class="d">proba combinée</div></div>
+        <div class="kpi"><div class="v num">${f2(c.cote)}</div><div class="d">cote totale (calcul)</div></div>
+        <div class="kpi"><div class="v num cy">${pct(c.p_combine)}</div><div class="d">proba combin\u00e9e</div></div>
       </div>
-      <div style="margin-top:6px">${lignes}</div></div>`;
+      <div class="cases">${jambes.slice(0, 10).map(caseLeg).join("")}</div>
+      ${origine}</div>`;
+  }
+
+  function dernierComb(D, nom) {
+    const rows = D.comb.filter((c) => (c.nom || "") === nom)
+      .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""));
+    return rows[0] || null;
   }
 
   async function charge() {
@@ -374,40 +398,39 @@
   /* Carte « HIER » : résultat du SAFE de la veille, conseils touchés la
      veille, SAFE passés depuis le lancement. Données 100 % réelles (tables
      selections/combines) — si rien n'est archivé, la carte le dit. */
+  /* Hier (11/09) : conseil touch\u00e9 et SAFE touch\u00e9, c'est tout \u2014 aucun
+     d\u00e9tail de matchs sur l'accueil. */
   function carteVeille(D) {
     const h = hier();
     const sel = D.sel.filter((s) => (s.jour || "") === h && s.touche != null);
-    const safe = D.comb.filter((c) => estSafe(c) && (c.jour || "") === h)[0];
+    const safe = D.comb.filter((c) => (c.nom || "") === "safe" && (c.jour || "") === h)[0];
     if (!sel.length && !safe) {
-      return `<div class="card"><div class="hd"><span class="lbl">Hier — ${esc(dateFr(h))}</span></div>
-        <div class="small mut">Rien d'archivé pour la veille : le robot n'avait rien proposé,
-        ou les résultats ne sont pas encore résolus.</div></div>`;
+      return `<div class="card"><div class="hd"><span class="lbl">Hier \u2014 ${esc(dateFr(h))}</span></div>
+        <div class="small mut">Rien d'archiv\u00e9 pour la veille : le robot n'avait rien propos\u00e9,
+        ou les r\u00e9sultats ne sont pas encore r\u00e9solus.</div></div>`;
     }
     const t = sel.filter((s) => s.touche).length;
-    const etatSafe = safe ? (safe.touche == null ? `<span class="pill am">en cours</span>`
-      : safe.touche ? `<span class="pill em">✓ safe validé</span>` : `<span class="pill rd">✗ safe manqué</span>`) : "";
-    return `<div class="card"><div class="hd"><span class="lbl">Hier — ${esc(dateFr(h))}</span>${etatSafe}</div>
-      <div class="kpis" style="grid-template-columns:1fr 1fr">
-        <div class="kpi"><div class="v num ${t === sel.length && sel.length ? "em" : ""}">${t}/${sel.length || 0}</div><div class="d">conseils touchés</div></div>
-        <div class="kpi"><div class="v num">${sel.length ? Math.round(100 * t / sel.length) + " %" : "—"}</div><div class="d">réussite du jour</div></div>
-      </div>
-      <div style="margin-top:4px">${sel.map((s) => `<div class="mrow"><div class="l">
-        <div class="t small" title="${esc(s.home)} vs ${esc(s.away)}">${esc(s.home)} <span class="mut">vs</span> ${esc(s.away)}</div>
-        <div class="tiny mut">${esc(s.option)}</div></div>
-        <div class="r"><b class="${s.touche ? "em" : "rd"}">${s.touche ? "✓" : "✗"} ${s.buts_home ?? ""}-${s.buts_away ?? ""}</b></div></div>`).join("")}</div></div>`;
+    const n = sel.length;
+    const conseil = !n ? `<span class="pill mu">aucun conseil</span>`
+      : t === n ? `<span class="pill em">\u2713 touch\u00e9${n > 1 ? ` (${t}/${n})` : ""}</span>`
+                : `<span class="pill rd">\u2717 manqu\u00e9${n > 1 ? ` (${t}/${n})` : ""}</span>`;
+    const etatSafe = !safe ? `<span class="pill mu">pas de SAFE</span>`
+      : safe.touche == null ? `<span class="pill am">en cours</span>`
+      : safe.touche ? `<span class="pill em">\u2713 touch\u00e9</span>` : `<span class="pill rd">\u2717 manqu\u00e9</span>`;
+    return `<div class="card"><div class="hd"><span class="lbl">Hier \u2014 ${esc(dateFr(h))}</span></div>
+      <div class="mrow"><div class="l"><div class="t small">Conseil</div></div><div class="r">${conseil}</div></div>
+      <div class="mrow"><div class="l"><div class="t small">SAFE</div></div><div class="r">${etatSafe}</div></div></div>`;
   }
 
   /* ---------------------------------------------- coquille (header + nav) */
   const ICONES = {
     accueil: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1z"/></svg>',
     selections: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
-    corners: '<svg viewBox="0 0 24 24"><path d="M5 21V4h5l1 3h8"/></svg>',
-    series: '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
+    exotiques: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.2"/></svg>',
     bilan: '<svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg>',
   };
-  const NAV = [["accueil", "index.html", "Accueil"], ["selections", "selections.html", "Sélections"],
-    ["corners", "corners.html", "Corners"], ["series", "series.html", "Séries"],
-    ["bilan", "bilan.html", "Bilan"]];
+  const NAV = [["accueil", "index.html", "Accueil"], ["selections", "selections.html", "S\u00e9lections"],
+    ["exotiques", "exotiques.html", "Exotiques"], ["bilan", "bilan.html", "Bilan"]];
 
   function coquille() {
     const h = document.getElementById("hdr");
@@ -423,303 +446,336 @@
       `<a href="${href}" class="${PAGE === id ? "on" : ""}">${ICONES[id]}<span>${lb}</span></a>`).join("")}</div>`;
   }
 
+  /* ------------------------------------------- helpers partag\u00e9s (11/09) */
+  const MOIS_FR = ["janvier", "f\u00e9vrier", "mars", "avril", "mai", "juin", "juillet",
+    "ao\u00fbt", "septembre", "octobre", "novembre", "d\u00e9cembre"];
+  const moisFr = (m) => MOIS_FR[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4);
+  const debutSaison = () => {
+    const d = new Date();
+    const y = d.getMonth() + 1 >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+    return y + "-08-01";
+  };
+  function tabsHtml(actif, items) {
+    return `<div class="tabs">${items.map(([id, lb]) =>
+      `<button type="button" class="tab ${id === actif ? "on" : ""}" data-tab="${id}">${lb}</button>`).join("")}</div>`;
+  }
+  function bindTabs(z, render) {
+    z.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+      z.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+      const c = z.querySelector("#tab-contenu");
+      if (c) c.innerHTML = render(b.dataset.tab);
+    }));
+  }
+  const couleurP = (p) => {
+    const x = Math.round((p || 0) * 100);
+    return x >= 85 ? "p-vert" : x >= 70 ? "p-ambre" : "p-rouge";
+  };
+  async function chargeJson(u) {
+    try {
+      const r = await fetch(u, { cache: "no-store" });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) { return null; }
+  }
+  function kpiTouche(o, lb) {
+    return `<div class="kpi"><div class="v num ${o.n && o.t === o.n ? "em" : ""}">${o.n ? o.t + "/" + o.n : "\u2014"}</div>
+      <div class="d">${lb}${o.n ? " \u00b7 " + Math.round(100 * o.t / o.n) + " %" : ""}</div></div>`;
+  }
+  const kTouche = (rows) => {
+    const r = rows.filter((x) => x.touche != null);
+    return { t: r.filter((x) => x.touche).length, n: r.length };
+  };
+
   /* ---------------------------------------------------------- accueil */
+  /* Trois volets (11/09) : \u2460 compteurs du mois (conseils / SAFE / cote 2 /
+     cote 5 touch\u00e9s \u2014 remis \u00e0 z\u00e9ro le 1er de chaque mois), \u2461 hier : conseil
+     touch\u00e9 + SAFE touch\u00e9, sans d\u00e9tailler les matchs, \u2461 aujourd'hui : les
+     conseils du jour, comme avant. Plus de \u00ab matchs r\u00e9els en base \u00bb, plus de
+     teaser buts d'affil\u00e9e, plus de coupon corners sur l'accueil. */
+  function compteMois(D) {
+    const m = aujourdHui().slice(0, 7);
+    const comb = (nom) => kTouche(D.comb.filter((c) => (c.nom || "") === nom &&
+      (c.jour || "").slice(0, 7) === m));
+    return {
+      mois: m,
+      conseil: kTouche(D.sel.filter((s) => (s.jour || "").slice(0, 7) === m)),
+      safe: comb("safe"), cote2: comb("cote2"), cote5: comb("cote5"),
+    };
+  }
   function pageAccueil(D) {
     const z = document.getElementById("z-contenu");
     if (!z) return;
-    const resolues = D.sel.filter((s) => s.touche != null);
-    const touches = resolues.filter((s) => s.touche).length;
-    const taux = resolues.length ? Math.round(100 * touches / resolues.length) : null;
-    const auj = new Date().toISOString().slice(0, 10);
+    const cm = compteMois(D);
+    const auj = aujourdHui();
     const duJour = D.sel.filter((s) => (s.jour || "") === auj);
-    const vol = (D.bilan && D.bilan.volume) || {};
     z.innerHTML = `
       <div class="card foc">
         <div class="hd"><span class="lbl">Terminal du jour</span><span class="pill cy"><span class="dot"></span>sync</span></div>
-        <h1 style="font-size:1.45rem">Le robot mathématique<br>du football</h1>
-        <div class="small ink2" style="margin:6px 0 12px">Moteur Dixon-Coles calibré en walk-forward sur
-          des dizaines de milliers de matchs réels. Pas d'intelligence artificielle : des probabilités
-          mesurées, des limites affichées, aucune promesse de gain.</div>
-        <div class="kpis">
-          <div class="kpi"><div class="v num">${vol.total_matchs ? vol.total_matchs.toLocaleString("fr-FR") : "—"}</div><div class="d">matchs réels en base</div></div>
-          <div class="kpi"><div class="v num ${taux != null ? "em" : ""}">${taux != null ? taux + " %" : "—"}</div><div class="d">conseils touchés (${touches}/${resolues.length})</div></div>
-        </div>
-        <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
-          <a class="btn" href="selections.html">Voir les sélections du jour</a>
-          <a class="btn ghost" href="series.html">Buts d'affilée — nouveau</a>
+        <h1 style="font-size:1.45rem">Le robot math\u00e9matique<br>du football</h1>
+        <div class="small ink2" style="margin:6px 0 12px">Moteur Dixon-Coles calibr\u00e9 en walk-forward sur
+          des dizaines de milliers de matchs r\u00e9els. Pas d'intelligence artificielle : des probabilit\u00e9s
+          mesur\u00e9es, des limites affich\u00e9es, aucune promesse de gain.</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <a class="btn" href="selections.html">Voir les s\u00e9lections du jour</a>
+          <a class="btn ghost" href="exotiques.html">Choix exotiques</a>
         </div>
       </div>
+      <div class="card"><div class="hd"><span class="lbl">Ce mois-ci \u2014 ${esc(moisFr(cm.mois))}</span>
+        <span class="pill cy">\u00e0 z\u00e9ro le 1er</span></div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr">
+          ${kpiTouche(cm.conseil, "conseils touch\u00e9s")}
+          ${kpiTouche(cm.safe, "SAFE touch\u00e9s")}
+          ${kpiTouche(cm.cote2, "cote 2 touch\u00e9s")}
+          ${kpiTouche(cm.cote5, "cote 5 touch\u00e9s")}
+        </div></div>
+      ${carteVeille(D)}
       <div class="card"><div class="hd"><span class="lbl">Aujourd'hui</span>
         <span class="pill ind">${duJour.length} conseil${duJour.length > 1 ? "s" : ""}</span></div>
         ${duJour.length ? duJour.slice(0, 4).map(ligneSelection).join("")
         : `<div class="small mut">Aucun conseil aujourd'hui : aucun match n'atteint les seuils
-           mesurés. Le robot s'abstient plutôt que de forcer — ce n'est pas un bug.</div>`}
+           mesur\u00e9s. Le robot s'abstient plut\u00f4t que de forcer \u2014 ce n'est pas un bug.</div>`}
       </div>
-      ${carteVeille(D)}
-      <div id="z-series-teaser"></div>
-      <div id="z-corners-teaser"></div>`;
-    teaserSeries();
-    const cp = D.comb.filter((c) => c.nom === "corners_montante")
-      .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""))[0];
-    const zc = document.getElementById("z-corners-teaser");
-    if (zc) zc.innerHTML = cp ? `<div class="card"><div class="hd"><span class="lbl">Coupon corners montante</span>
-        <span class="pill em">actif</span></div>
-        <div class="mrow"><div class="l"><div class="t">${(cp.jambes || []).length} jambes · ${esc(cp.jour || "")}</div>
-        <div class="tiny mut">chaque jambe ≥ 85 % de fréquence réelle mesurée</div></div>
-        <div class="r"><div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:17px">${f2(cp.cote)}</div>
-        <div class="tiny mut">proba ${pct(cp.p_combine)}</div></div></div>
-        <a class="btn ghost" style="margin-top:10px" href="corners.html">Ouvrir le coupon corners</a></div>`
-      : `<div class="card"><div class="hd"><span class="lbl">Coupon corners montante</span></div>
-         <div class="small mut">Pas de coupon corners aujourd'hui : aucun match n'atteint 85 % de
-         fréquence réelle mesurée. Mieux vaut sauter un jour que forcer.</div></div>`;
+      <div class="warn">Informations chiffr\u00e9es issues d'un robot math\u00e9matique calibr\u00e9, jamais
+        un conseil financier : probabilit\u00e9s \u2260 certitudes, aucune promesse de gain.</div>`;
   }
 
-  function teaserSeries() {
-    const z = document.getElementById("z-series-teaser");
-    if (!z) return;
-    chargeSeries().then((S) => {
-      if (!S || !S.matchs || !S.matchs.length) {
-        z.innerHTML = `<div class="card"><div class="hd"><span class="lbl">Buts d'affilée</span></div>
-          <div class="small mut">Pas de match aujourd'hui dans le calendrier du robot.</div></div>`;
-        return;
-      }
-      const top = S.matchs.slice(0, 3);
-      z.innerHTML = `<div class="card hi"><div class="hd"><span class="lbl">Buts d'affilée — aujourd'hui</span>
-        <span class="pill cy">nouveau</span></div>
-        ${top.map((m) => `<div class="mrow"><div class="l">
-          <div class="t" title="${esc(m.home)} vs ${esc(m.away)}">${esc(m.home)} <span class="mut">vs</span> ${esc(m.away)}</div>
-          <div class="tiny mut">${esc(m.ligue)}${m.heure ? " · " + esc(m.heure) : ""}</div></div>
-          <div class="r"><div class="tiny mut">2 d'affilée : <b class="ink2">non</b></div>
-          <div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:16px">${pct(1 - m.s2)}</div></div></div>`).join("")}
-        <div class="tiny mut" style="margin-top:8px">« non » = aucune équipe ne marque 2 buts de suite.
-          Information chiffrée, jamais un conseil.</div>
-        <a class="btn ghost" style="margin-top:10px" href="series.html">Tout voir : match, domicile, extérieur</a></div>`;
-    });
+  function carteSafeWeekend(D) {
+    const sw = dernierComb(D, "safe_weekend");
+    if (!sw) return "";
+    const dow = new Date().getDay();          /* 0=dim 5=ven 6=sam */
+    const weekEnd = (dow === 5 || dow === 6 || dow === 0);
+    if (weekEnd) return carteCombine(sw, "SAFE DU WEEK-END \u2014 \u00e0 venir");
+    /* Lundi \u2192 jeudi : r\u00e9sultat du week-end pass\u00e9, d\u00e9taill\u00e9, jusqu'au jeudi. */
+    const jambes = sw.jambes || [];
+    const resolues = jambes.filter((l) => l.resultat && l.resultat.touche != null);
+    if (!resolues.length) return "";
+    return carteCombine(sw, "R\u00c9SULTAT SAFE WEEK-END \u2014 week-end pass\u00e9");
   }
-
-  /* ---------------------------------------------------------- séries */
-  let SERIES_CACHE = null;
-  function chargeSeries() {
-    if (SERIES_CACHE) return Promise.resolve(SERIES_CACHE);
-    return fetch("../pronos-foot/series_jour.json", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { SERIES_CACHE = d; return d; })
-      .catch(() => null);
-  }
-
-  function pageSeries() {
-    const z = document.getElementById("z-contenu");
-    if (!z) return;
-    z.innerHTML = `<div class="card"><div class="hd"><span class="lbl">Chargement…</span></div>
-      <div class="small mut">Lecture des probabilités du jour.</div></div>`;
-    chargeSeries().then((S) => {
-      if (!S) {
-        z.innerHTML = `<div class="err">Impossible de lire les séries du jour
-          (fichier robot injoignable). Réessayez dans quelques minutes.</div>`;
-        return;
-      }
-      const liste = (S.matchs || []).length
-        ? { titre: "Matchs du jour — " + (S.jour || ""), matchs: S.matchs }
-        : (S.prochain_jour && (S.prochain_jour.matchs || []).length)
-          ? { titre: "Prochain jour — " + S.prochain_jour.date + " (ceux du jour sont déjà commencés)", matchs: S.prochain_jour.matchs }
-          : { titre: "Matchs du jour — " + (S.jour || ""), matchs: [] };
-      const nonOui = (x) => x == null ? `<span class="mut">—</span>`
-        : `<b class="ink2 num">${pct(1 - x)}</b><div class="tiny mut">oui ${pct(x)}</div>`;
-      const ligne = (m) => `<tr>
-        <td class="tiny">${esc(m.heure || "—")}</td>
-        <td class="tname" title="${esc(m.home)} vs ${esc(m.away)}">${esc(m.home)} – ${esc(m.away)}<div class="tiny mut">${esc(m.ligue)}</div></td>
-        <td class="n">${nonOui(m.s2)}</td><td class="n">${nonOui(m.s3)}</td>
-        <td class="n">${nonOui(m.s2d)}</td><td class="n">${nonOui(m.s2e)}</td></tr>`;
-      const safe = S.safe && S.safe.length ? `<div class="card foc"><div class="hd">
-          <span class="lbl em">Safe du jour — buts d'affilée</span>
-          <span class="pill em">${S.safe.length} jambe${S.safe.length > 1 ? "s" : ""}</span></div>
-        ${S.safe.map((l) => `<div class="mrow"><div class="l">
-          <div class="t" title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
-          <div class="tiny mut">${esc(l.heure || "")} · ${esc(l.ligue)} · <span class="em">${esc(l.option)} · ${esc(l.fiche)}</span></div></div>
-          <div class="r"><div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:16px">${pct(1 - l.p)}</div>
-          <div class="tiny mut">non · oui ${pct(l.p)}</div></div></div>`).join("")}</div>`
-        : `<div class="card"><div class="hd"><span class="lbl em">Safe du jour — buts d'affilée</span>
-          <span class="lbl">0</span></div><div class="small mut">Aucun match des 5 grands championnats
-          n'atteint aujourd'hui les seuils mesurés (2+ match ≥ 75 % ou 2+ domicile ≥ 70 %).
-          Le robot s'abstient plutôt que de forcer.</div></div>`;
-      const gc = S.grosse_cote && S.grosse_cote.legs && S.grosse_cote.legs.length
-        ? `<div class="card"><div class="hd"><span class="lbl am">Combiné grosse cote — buts d'affilée</span>
-          <span class="pill am">cote juste ${f2(S.grosse_cote.cote_juste)}</span></div>
-          ${S.grosse_cote.legs.map((l) => `<div class="mrow"><div class="l">
-            <div class="t" title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
-            <div class="tiny mut">${esc(l.option)} · juste @ ${f2(l.cote_juste)}</div></div>
-            <div class="r"><span class="num am small">${pct(l.p)}</span></div></div>`).join("")}
-          <div class="tiny mut" style="margin-top:8px">Proba combinée ${pct(S.grosse_cote.p_combine)}
-            (indépendance supposée). Billet de loterie assumé : environ 1 chance sur
-            ${Math.round(S.grosse_cote.cote_juste)}.</div></div>`
-        : `<div class="card"><div class="hd"><span class="lbl am">Combiné grosse cote — buts d'affilée</span>
-          <span class="lbl">0</span></div><div class="small mut">Pas assez de jambes « 3 buts d'affilée »
-          ≥ 10 % aujourd'hui pour la cible de cote juste 20 à 50. Jamais forcé.</div></div>`;
-      z.innerHTML = `
-        <div class="warn"><b>Information chiffrée, jamais un conseil.</b> Probabilités de séries de
-          buts d'affilée (même équipe, sans but adverse entre-temps), biais mesurés puis corrigés sur
-          2 923 matchs réels (2 saisons, 5 grands championnats). <b>NON</b> = la série ne se produit
-          pas. Aucun bookmaker de nos sources ne propose ces marchés : rien dans le coupon ni le suivi.</div>
-        <div class="card"><div class="hd"><span class="lbl">${esc(liste.titre)}</span>
-          <span class="pill cy">${liste.matchs.length}</span></div>
-          ${liste.matchs.length ? `<div class="scrollx"><table class="tbl"><thead><tr>
-            <th>H</th><th>Match</th><th class="n">2·match</th><th class="n">3·match</th>
-            <th class="n">2·dom</th><th class="n">2·ext</th></tr></thead>
-            <tbody>${liste.matchs.map(ligne).join("")}</tbody></table></div>
-            <div class="tiny mut" style="margin-top:6px">Chiffre gras = NON (la série n'arrive pas) ;
-            dessous = oui. Hors Big 5 ou coupes : affiché, jamais dans le safe ni le combiné.</div>`
-          : `<div class="small mut">Aucun match aujourd'hui dans le calendrier du robot.</div>`}
-        </div>
-        ${safe}${gc}`;
-    });
-  }
-
-  /* ---------------------------------------------------------- selections */
   function pageSelections(D) {
     const z = document.getElementById("z-contenu");
     if (!z) return;
-    const auj = new Date().toISOString().slice(0, 10);
+    const auj = aujourdHui();
     const duJour = D.sel.filter((s) => (s.jour || "") === auj);
     const aVenir = D.sel.filter((s) => (s.jour || "") > auj && s.touche == null);
-    const combis = D.comb.filter((c) => (c.jour || "") >= hier());
-    z.innerHTML = `
-      <div class="card hi"><div class="hd"><span class="lbl">Sélections du jour</span>
-        <span class="pill ind">${duJour.length}</span></div>
-        ${duJour.length ? duJour.map(ligneSelection).join("")
-        : `<div class="small mut">Aucune sélection aujourd'hui : aucun match n'atteint le seuil
-           choisi. Le robot s'abstient — probabilité ≠ gain garanti.</div>`}
-      </div>
-      ${aVenir.length ? `<div class="card"><div class="hd"><span class="lbl">À venir</span>
-        <span class="pill mu">${aVenir.length}</span></div>
-        ${aVenir.slice(0, 8).map(ligneSelection).join("")}</div>` : ""}
-      <div class="sect"><span class="lbl">Combinés du robot</span><span class="line"></span></div>
-      ${combis.length ? combis.map(carteCombine).join("")
-        : `<div class="empty">Aucun combiné en cours.</div>`}
-      <div class="warn" style="margin-top:4px">Sélections issues du moteur calibré walk-forward.
-        Probabilités ≠ certitudes : aucune promesse de gain. Divisions instables exclues sous 85 %
-        (conseils) et 90 % (SAFE/combinés), coupes jamais dans les sélections suivies.</div>`;
+    function contenu(onglet) {
+      if (onglet === "safe") {
+        const safe = dernierComb(D, "safe");
+        const pertinent = safe && (safe.jour === auj ||
+          (safe.jour === hier() && safe.touche == null));
+        const safeHtml = pertinent
+          ? carteCombine(safe, safe.jour === auj ? "SAFE DU JOUR" : "SAFE D'HIER \u2014 en cours")
+          : `<div class="card"><div class="hd"><span class="lbl ind">SAFE du jour</span></div>
+             <div class="small mut">Pas de SAFE aujourd'hui : aucune combinaison n'atteint les
+             seuils mesur\u00e9s. Le robot s'abstient plut\u00f4t que de forcer \u2014 ce n'est pas un bug.</div></div>`;
+        return safeHtml + carteSafeWeekend(D);
+      }
+      if (onglet === "combine") {
+        const c2 = dernierComb(D, "cote2"), c5 = dernierComb(D, "cote5");
+        if (!c2 && !c5) return `<div class="empty">Aucun combin\u00e9 en cours : le robot s'abstient
+          plut\u00f4t que de forcer.</div>`;
+        return `${c2 ? carteCombine(c2) : ""}${c5 ? carteCombine(c5) : ""}`;
+      }
+      return `
+        <div class="card hi"><div class="hd"><span class="lbl">S\u00e9lections du jour</span>
+          <span class="pill ind">${duJour.length}</span></div>
+          ${duJour.length ? duJour.map(ligneSelection).join("")
+          : `<div class="small mut">Aucune s\u00e9lection aujourd'hui : aucun match n'atteint le seuil
+             choisi. Le robot s'abstient \u2014 probabilit\u00e9 \u2260 gain garanti.</div>`}
+        </div>
+        ${aVenir.length ? `<div class="card"><div class="hd"><span class="lbl">\u00c0 venir</span>
+          <span class="pill mu">${aVenir.length}</span></div>
+          ${aVenir.slice(0, 8).map(ligneSelection).join("")}</div>` : ""}`;
+    }
+    z.innerHTML = tabsHtml("jour", [["jour", "S\u00e9lection du jour"], ["safe", "SAFE"], ["combine", "Combin\u00e9"]])
+      + `<div id="tab-contenu">${contenu("jour")}</div>
+      <div class="warn">S\u00e9lections issues du moteur math\u00e9matique calibr\u00e9 en walk-forward.
+        Cotes affich\u00e9es = calcul du robot (cote juste), jamais celles d'un bookmaker.
+        Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions instables exclues sous 85 %
+        (conseils) et 90 % (SAFE/combin\u00e9s), coupes jamais dans les s\u00e9lections suivies.</div>`;
+    bindTabs(z, contenu);
   }
 
-  /* ---------------------------------------------------------- corners */
-  function pageCorners(D) {
+  /* ---------------------------------------------------- choix exotiques */
+  /* Onglets (11/09) : Corners \u2014 s\u00e9lections simples uniquement, PLUS de coupon
+     montante \u2014 et But d'affil\u00e9e \u2014 uniquement des NON, un seul conseil clair
+     par match. Pourcentages 60\u2013100 % en 3 couleurs : vert \u2265 85, ambre 70\u201384,
+     rouge 60\u201369. Match dans une case : \u00e9quipes, score en dessous, pr\u00e9diction,
+     puis r\u00e9sultat. */
+  function caseExo(m, type) {
+    const non = type === "affilee" ? (m.non || {}) : m;
+    const p = non.p;
+    const r = m.resultat;
+    let verdict = `<span class="pill mu">en attente</span>`;
+    let score = "";
+    if (r) {
+      if (type === "affilee") {
+        if (r.touche != null) {
+          verdict = r.touche ? `<span class="pill em">\u2713 touch\u00e9</span>` : `<span class="pill rd">\u2717 manqu\u00e9</span>`;
+          score = (r.sh != null) ? `<div class="case-score">${r.sh} \u2013 ${r.sa}</div>` : "";
+        } else {
+          verdict = `<span class="pill am">non v\u00e9rifiable</span>`;
+          score = (r.sh != null) ? `<div class="case-score">${r.sh} \u2013 ${r.sa}</div>` : "";
+        }
+      } else if (r.touche != null) {
+        verdict = r.touche ? `<span class="pill em">\u2713 touch\u00e9</span>` : `<span class="pill rd">\u2717 manqu\u00e9</span>`;
+        score = `<div class="case-score">${r.hc} \u2013 ${r.ac} <span class="tiny mut" style="font-weight:500">corners</span></div>`;
+      }
+    }
+    return `<div class="case">
+      <div class="case-h"><span class="tiny mut">${esc(m.heure || "")}${m.ligue ? " \u00b7 " + esc(m.ligue) : ""}</span>${verdict}</div>
+      <div class="case-t"><span class="team" title="${esc(m.home)}">${esc(m.home)}</span>
+        <span class="mut tiny">vs</span>
+        <span class="team" title="${esc(m.away)}">${esc(m.away)}</span></div>
+      ${score}
+      <div class="case-p"><span class="chip">${esc(non.option || "")}</span>
+        ${p != null ? `<span class="pct-badge ${couleurP(p)}">${pct(p)}</span>` : ""}</div>
+    </div>`;
+  }
+
+  const jourExo = (vue, jour) => ((vue && vue.jours) || {})[jour] || { matchs: [] };
+
+  function histoExo(vue, type) {
+    if (!vue) return "";
+    const jours = Object.keys(vue.jours || {}).sort().reverse()
+      .filter((j) => j !== vue.jour).slice(0, 7);
+    const blocs = jours.map((j) => {
+      const ms = jourExo(vue, j).matchs || [];
+      if (!ms.length) return "";
+      return `<div class="sect" style="margin-top:10px"><span class="lbl">${esc(dateFr(j))}</span><span class="line"></span></div>
+        <div class="cases">${ms.map((m) => caseExo(m, type)).join("")}</div>`;
+    }).join("");
+    if (!blocs) return "";
+    return `<div class="card"><div class="hd"><span class="lbl">Jours pr\u00e9c\u00e9dents</span></div>${blocs}</div>`;
+  }
+
+  function renduCorners(C) {
+    if (!C) return `<div class="card"><div class="hd"><span class="lbl em">Corners \u2014 aujourd'hui</span></div>
+      <div class="small mut">Le robot n'a pas encore publi\u00e9 les corners du jour (mise \u00e0 jour
+      toutes les heures).</div></div>`;
+    const ms = jourExo(C, C.jour).matchs || [];
+    return `
+      <div class="card"><div class="hd"><span class="lbl em">Corners \u2014 s\u00e9lections du jour</span>
+        <span class="pill cy">${ms.length}</span></div>
+        ${ms.length ? `<div class="cases">${ms.map((m) => caseExo(m, "corners")).join("")}</div>`
+        : `<div class="small mut">Aucune s\u00e9lection corners : aucun match ne tient un handicap
+           calibr\u00e9 \u00e0 60 % ou plus de fr\u00e9quence r\u00e9elle mesur\u00e9e. Le robot s'abstient
+           plut\u00f4t que de forcer.</div>`}
+        <div class="tiny mut" style="margin-top:8px">Un seul choix clair par match : le handicap le plus
+        p\u00e9nalisant sur la dominante attendue qui tient encore. R\u00e9sultat via
+        football-data.co.uk (1 \u00e0 3 jours de d\u00e9lai \u2014 \u00ab en attente \u00bb tant qu'il manque).</div></div>
+      ${histoExo(C, "corners")}
+      <div class="card"><div class="hd"><span class="lbl">Calibration honn\u00eate</span></div>
+        <div class="small ink2">Probabilit\u00e9s <b>calibr\u00e9es</b> en walk-forward : le mod\u00e8le brut
+        surestimait la domination corners (annonc\u00e9 92 % \u2192 r\u00e9alis\u00e9 79 %) ; la d\u00e9cote
+        est int\u00e9gr\u00e9e dans chaque pourcentage affich\u00e9.</div></div>`;
+  }
+
+  function renduAffilee(A) {
+    if (!A) return `<div class="card"><div class="hd"><span class="lbl">But d'affil\u00e9e \u2014 aujourd'hui</span></div>
+      <div class="small mut">Le robot n'a pas encore publi\u00e9 le suivi du jour (mise \u00e0 jour
+      toutes les heures).</div></div>`;
+    const ms = jourExo(A, A.jour).matchs || [];
+    return `
+      <div class="card"><div class="hd"><span class="lbl">But d'affil\u00e9e \u2014 aujourd'hui</span>
+        <span class="pill cy">${ms.length}</span></div>
+        ${ms.length ? `<div class="cases">${ms.map((m) => caseExo(m, "affilee")).join("")}</div>`
+        : `<div class="small mut">Aucun conseil aujourd'hui : aucun match n'atteint 60 % sur un
+           \u00ab NON \u00bb. Le robot s'abstient plut\u00f4t que de forcer.</div>`}
+        <div class="tiny mut" style="margin-top:8px">Uniquement des NON \u2014 jamais de but d'affil\u00e9e
+        affirmatif. Un seul conseil clair par match. R\u00e9sultat r\u00e9solu sur les buts minut\u00e9s
+        ESPN (triple v\u00e9rification, jamais d'imputation).</div></div>
+      ${histoExo(A, "affilee")}`;
+  }
+
+  function pageExotiques() {
     const z = document.getElementById("z-contenu");
     if (!z) return;
-    const cp = D.comb.filter((c) => c.nom === "corners_montante")
-      .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""))[0];
-    if (!cp) {
-      z.innerHTML = `<div class="card"><div class="hd"><span class="lbl em">Coupon corners montante</span>
-        <span class="lbl">0</span></div>
-        <div class="small ink2">Aucun coupon ce jour : aucun match n'atteint 85 % de fréquence réelle
-        mesurée sur son meilleur handicap corners. Mieux vaut sauter un jour que forcer —
-        discipline algorithmique absolue.</div></div>
-        ${carteCalibCorners()}`;
-      return;
-    }
-    let mise = 1;
-    const jambes = (cp.jambes || []).map((l, i) => {
-      const c = l.cote || (l.p_cal ? 1 / l.p_cal : null);
-      const apres = c ? mise * c : null;
-      const html = `<div class="card">
-        <div class="hd"><span class="lbl ind">${String(i + 1).padStart(2, "0")} · ${esc(l.heure || "")}</span>
-          <span class="pill mu">${esc(String(l.ligue || "").slice(0, 14))}</span></div>
-        <div class="t" style="font-family:var(--f-disp);font-weight:700;font-size:16px"
-          title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
-        <div style="margin:6px 0"><span class="chip">${esc(l.option)}</span></div>
-        <div class="mrow"><div class="l tiny mut">annonce <s>${pct(l.p_brut)}</s> →
-          <span class="em">${pct(l.p_cal)}</span></div>
-          <div class="r tiny mut">cote juste <b class="ink2 num">${f2(c)}</b></div></div>
-        <div class="tiny mut">mise ${f2(mise)} u → <b class="ink2 num">${f2(apres)}</b> u</div>
-        <div class="bar"><i style="width:${Math.round((l.p_cal || 0) * 100)}%"></i></div></div>`;
-      if (c) mise = apres;
-      return html;
-    }).join("");
-    z.innerHTML = `
-      <div class="card foc"><div class="hd"><span class="lbl em">Coupon montante — ${esc(cp.jour || "")}</span>
-        <span class="pill em"><span class="dot"></span>active run</span></div>
-        <div class="kpis">
-          <div class="kpi"><div class="v num">${f2(cp.cote)}</div><div class="d">cote totale composée</div></div>
-          <div class="kpi"><div class="v num em">${pct(cp.p_combine)}</div><div class="d">proba combinée calibrée</div></div>
-        </div>
-        <div class="ok small" style="margin-top:10px">Tous les bons matchs du jour, dans l'ordre
-        chronologique des coups d'envoi — même jour uniquement, jamais de report ni d'enjambement
-        de session.</div></div>
-      ${jambes}
-      <div class="card hi"><div class="hd"><span class="lbl em">Objectif montante</span></div>
-        <div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:1.3rem">
-        Si tout passe : ${f2(mise)} u récupérées</div></div>
-      ${carteCalibCorners()}`;
-  }
-
-  function carteCalibCorners() {
-    return `<div class="card"><div class="hd"><span class="lbl">Calibration des modèles corners</span></div>
-      <div class="small ink2">Probabilités <b>calibrées</b> en walk-forward sur les données
-      football-data.co.uk : le modèle brut surestimait la domination corners (victoire annoncée
-      92 % → réalisée 79 %). Tous les pronostics corners intègrent cette décote de variance
-      structurelle. La 1re mi-temps n'entre jamais dans le safe (mesuré : 54 % de victoire sèche
-      en moyenne).</div>
-      <div class="tiny mut" style="margin-top:8px">Règle de sécurité : aucun coupon si aucun match
-      n'atteint 85 % de fréquence réelle mesurée aujourd'hui. Discipline algorithmique absolue.</div></div>`;
+    z.innerHTML = tabsHtml("corners", [["corners", "Corners"], ["affilee", "But d'affil\u00e9e"]])
+      + `<div id="tab-contenu"><div class="empty">Chargement\u2026</div></div>
+      <div class="warn">Pourcentages entre 60 et 100 %, en trois couleurs : vert \u2265 85 %,
+        ambre 70\u201384 %, rouge 60\u201369. Informations chiffr\u00e9es, jamais un conseil financier :
+        probabilit\u00e9s \u2260 certitudes, aucune promesse de gain.</div>`;
+    Promise.all([chargeJson("../pronos-foot/corners_jour.json"),
+                 chargeJson("../pronos-foot/affilee_suivi.json")]).then(([C, A]) => {
+      function contenu(onglet) { return onglet === "corners" ? renduCorners(C) : renduAffilee(A); }
+      const c = z.querySelector("#tab-contenu");
+      if (c) c.innerHTML = contenu("corners");
+      bindTabs(z, contenu);
+    });
   }
 
   /* ---------------------------------------------------------- bilan */
+  /* Bilan de la SAISON (1er ao\u00fbt \u2192 r\u00e9initialisation \u00e0 chaque nouvelle
+     saison), graphique historique mensuel, historique des 7 derniers jours
+     par date. Pas de \u00ab derni\u00e8re s\u00e9lection r\u00e9solue \u00bb (11/09). */
   function pageBilan(D) {
     const z = document.getElementById("z-contenu");
     if (!z) return;
-    const resolues = D.sel.filter((s) => s.touche != null);
-    const touches = resolues.filter((s) => s.touche).length;
-    const taux = resolues.length ? Math.round(100 * touches / resolues.length) : null;
-    let roi = 0, n = 0;
-    for (const s of resolues) {
-      if (s.cote_marche == null) continue;
-      roi += s.touche ? s.cote_marche - 1 : -1; n++;
-    }
-    const parMois = {};
-    for (const s of resolues) {
-      const m = (s.jour || "").slice(0, 7);
-      (parMois[m] = parMois[m] || { t: 0, n: 0 });
-      parMois[m].n++; if (s.touche) parMois[m].t++;
-    }
-    const mois = Object.keys(parMois).sort().slice(-6);
-    const vol = (D.bilan && D.bilan.volume) || {};
+    const ds = debutSaison();
+    const selS = D.sel.filter((s) => (s.jour || "") >= ds);
+    const combS = (nom) => D.comb.filter((c) => (c.nom || "") === nom && (c.jour || "") >= ds);
+    const cats = [
+      ["conseils touch\u00e9s", kTouche(selS)],
+      ["SAFE touch\u00e9s", kTouche(combS("safe"))],
+      ["cote 2 touch\u00e9s", kTouche(combS("cote2"))],
+      ["cote 5 touch\u00e9s", kTouche(combS("cote5"))],
+    ];
+    const moisSet = {};
+    for (const r of selS) moisSet[(r.jour || "").slice(0, 7)] = 1;
+    for (const nom of ["safe", "cote2", "cote5"])
+      for (const c of combS(nom)) moisSet[(c.jour || "").slice(0, 7)] = 1;
+    const mois = Object.keys(moisSet).filter((m) => m && m.length === 7 && m >= ds.slice(0, 7)).sort();
+    const COULEURS = { conseil: "var(--cy)", safe: "var(--em)", cote2: "var(--ind)", cote5: "var(--am)" };
+    const kMois = (rows, m) => kTouche(rows.filter((x) => (x.jour || "").slice(0, 7) === m));
+    const graph = mois.map((m) => {
+      const lignes = [
+        ["conseil", "Conseils", kMois(selS, m)],
+        ["safe", "SAFE", kMois(combS("safe"), m)],
+        ["cote2", "Cote 2", kMois(combS("cote2"), m)],
+        ["cote5", "Cote 5", kMois(combS("cote5"), m)],
+      ].map(([cle, lb, o]) => {
+        const pc = o.n ? Math.round(100 * o.t / o.n) : null;
+        return `<div class="mrow" style="gap:6px;margin:3px 0">
+          <div class="l tiny mut" style="flex:0 0 58px">${lb}</div>
+          <div class="l" style="flex:1"><div class="tr" style="display:flex;height:9px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden">
+            <i style="height:100%;width:${pc == null ? 0 : pc}%;background:${COULEURS[cle]}"></i></div></div>
+          <div class="r tiny num" style="flex:0 0 74px;text-align:right">${pc == null ? "\u2014" : pc + " %"} <span class="mut">(${o.t}/${o.n})</span></div></div>`;
+      }).join("");
+      return `<div class="card"><div class="hd"><span class="lbl">${esc(moisFr(m))}</span></div>${lignes}</div>`;
+    }).join("");
+    const jours7 = [];
+    for (let i = 0; i < 7; i++)
+      jours7.push(new Date(Date.now() + 3600000 - i * 86400000).toISOString().slice(0, 10));
+    const etat = (o) => o.n === 0 ? `<span class="mut">\u2014</span>`
+      : o.t === o.n ? `<b class="em">\u2713${o.n > 1 ? " " + o.t + "/" + o.n : ""}</b>`
+      : o.t === 0 ? `<b class="rd">\u2717${o.n > 1 ? " 0/" + o.n : ""}</b>`
+      : `<b class="am">${o.t}/${o.n}</b>`;
+    const histoRows = jours7.map((j) => {
+      const cs = kTouche(D.sel.filter((s) => s.jour === j));
+      const sf = kTouche(D.comb.filter((c) => (c.nom || "") === "safe" && c.jour === j));
+      const c2 = kTouche(D.comb.filter((c) => (c.nom || "") === "cote2" && c.jour === j));
+      const c5 = kTouche(D.comb.filter((c) => (c.nom || "") === "cote5" && c.jour === j));
+      return `<tr><td>${j.slice(8, 10)}/${j.slice(5, 7)}</td>
+        <td>${etat(cs)}</td><td>${etat(sf)}</td><td>${etat(c2)}</td><td>${etat(c5)}</td></tr>`;
+    }).join("");
     z.innerHTML = `
-      <div class="card foc"><div class="hd"><span class="lbl">Transparence & bilan réel</span>
-        <span class="pill cy">données archivées</span></div>
-        <h1 style="font-size:1.3rem">Ce que le robot a vraiment touché</h1>
-        <div class="small ink2" style="margin:6px 0 12px">Chaque sélection est archivée puis résolue
-        sur les scores réels. Rien n'est effacé, rien n'est réécrit : les matchs manqués restent
-        affichés.</div>
-        <div class="kpis">
-          <div class="kpi"><div class="v num ${taux != null ? "em" : ""}">${taux != null ? taux + " %" : "—"}</div>
-            <div class="d">conseils touchés (${touches}/${resolues.length})</div></div>
-          <div class="kpi"><div class="v num ${roi >= 0 ? "em" : "rd"}">${(roi >= 0 ? "+" : "") + roi.toFixed(1)} u</div>
-            <div class="d">ROI sur ${n} sélections cotées</div></div>
-          <div class="kpi"><div class="v num">${vol.total_matchs ? vol.total_matchs.toLocaleString("fr-FR") : "—"}</div>
-            <div class="d">matchs réels en base</div></div>
-          <div class="kpi"><div class="v num">${D.comb.length}</div><div class="d">combinés archivés</div></div>
+      <div class="card foc"><div class="hd"><span class="lbl">Bilan de la saison</span>
+        <span class="pill cy">depuis le ${ds.slice(8, 10)}/${ds.slice(5, 7)}/${ds.slice(0, 4)}</span></div>
+        <h1 style="font-size:1.3rem">Ce que le robot a vraiment touch\u00e9</h1>
+        <div class="small ink2" style="margin:6px 0 12px">Chaque pr\u00e9diction est archiv\u00e9e puis r\u00e9solue
+        sur les r\u00e9sultats r\u00e9els. Rien n'est effac\u00e9, rien n'est r\u00e9\u00e9crit : les matchs manqu\u00e9s
+        restent affich\u00e9s. Le bilan se r\u00e9initialise au d\u00e9but de chaque saison (1er ao\u00fbt).</div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr">
+          ${cats.map(([lb, o]) => kpiTouche(o, lb)).join("")}
         </div></div>
-      ${mois.length ? `<div class="card"><div class="hd"><span class="lbl">Historique mensuel</span></div>
-        <div style="display:flex;gap:8px;align-items:flex-end;height:120px">
-        ${mois.map((m) => {
-          const r = parMois[m], t = Math.round(100 * r.t / r.n);
-          const nom = new Date(m + "-15T12:00:00Z").toLocaleDateString("fr-FR", { month: "short" });
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%">
-            <span class="tiny ${t >= 75 ? "ink2" : "cy"}">${t}%</span>
-            <div style="width:100%;border-radius:4px 4px 0 0;height:${Math.max(12, t)}%;background:${t >= 75 ? "var(--em)" : "var(--cy)"}"></div>
-            <span class="tiny mut">${nom}</span></div>`;
-        }).join("")}</div></div>` : ""}
-      <div class="card"><div class="hd"><span class="lbl">Dernières sélections résolues</span></div>
-        ${resolues.length ? `<div class="scrollx"><table class="tbl"><thead><tr>
-          <th>Jour</th><th>Match</th><th>Option</th><th class="n">Score</th><th class="n">Verdict</th></tr></thead>
-          <tbody>${resolues.slice(-14).reverse().map((s) => `<tr>
-            <td class="tiny">${esc((s.jour || "").slice(5))}</td>
-            <td class="tname" title="${esc(s.home)} vs ${esc(s.away)}">${esc(s.home)}–${esc(s.away)}</td>
-            <td class="tiny">${esc(s.option)}</td>
-            <td class="n tiny">${s.buts_home}-${s.buts_away}</td>
-            <td class="n"><b class="${s.touche ? "em" : "rd"}">${s.touche ? "✓" : "✗"}</b></td></tr>`).join("")}
-          </tbody></table></div>` : `<div class="small mut">Rien de résolu pour l'instant.</div>`}
-      </div>
-      <div class="warn">Bilan réel, pas simulé : mais un bon passé ne prédit pas l'avenir.
-        Les probabilités restent des probabilités — aucune promesse de gain.</div>`;
+      ${mois.length ? `<div class="sect"><span class="lbl">Historique mensuel</span><span class="line"></span></div>${graph}` : ""}
+      <div class="sect"><span class="lbl">7 derniers jours</span><span class="line"></span></div>
+      <div class="card"><div class="scrollx"><table class="tbl"><thead><tr>
+        <th>jour</th><th>conseils</th><th>SAFE</th><th>cote 2</th><th>cote 5</th></tr></thead>
+        <tbody>${histoRows}</tbody></table></div>
+        <div class="tiny mut" style="margin-top:6px">\u2713 touch\u00e9 \u00b7 \u2717 manqu\u00e9 \u00b7 \u2014 rien d'archiv\u00e9 ou pas encore r\u00e9solu ce jour-l\u00e0.</div></div>
+      <div class="warn">Bilan sur r\u00e9sultats r\u00e9els archiv\u00e9s, jamais r\u00e9\u00e9crits. Probabilit\u00e9s \u2260
+        certitudes : informations chiffr\u00e9es, jamais un conseil financier, aucune promesse de gain.</div>`;
   }
 
   const PAYS_AFRIQUE = [
@@ -911,6 +967,7 @@
       return "Inscriptions momentanément bloquées : le serveur a dépassé sa limite d'envoi d'e-mails de confirmation. Réessaie dans 1 heure (ou préviens l'administrateur sur WhatsApp).";
     return m;
   }
+
   function pageAuth(mode) {
     const onglets = document.getElementById("tab-email") && document.getElementById("panel-email");
     let email = null;
@@ -1198,7 +1255,7 @@
       appliquerPrixPaiement();   /* prix/promo dynamiques (table parametres) */
     }
     const besoinAuth = ["connexion", "inscription"].includes(PAGE);
-    const besoinData = ["accueil", "selections", "corners", "bilan"].includes(PAGE);
+    const besoinData = ["accueil", "selections", "exotiques", "bilan"].includes(PAGE);
     if (CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY !== "A_COLLER") {
       SB = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
     }
@@ -1207,22 +1264,21 @@
       else pageAuth(PAGE);
     }
     if (besoinAuth || besoinData) await sessionPret();
-    if (PAGE === "series") { pageSeries(); etatSession(); return; }
     if (besoinData) {
       const D = await charge();
       window.__ACC = await accesOk();
       if (!window.__ACC.ok && window.__ACC.raison === "sans-abonnement" &&
-          (PAGE === "selections" || PAGE === "corners")) {
+          (PAGE === "selections" || PAGE === "exotiques")) {
         location.replace("activation.html");
         return;
       }
       if (D) {
         if (PAGE === "accueil") pageAccueil(D);
         if (PAGE === "selections") (window.__ACC.ok ? pageSelections(D) : verrou("selections"));
-        if (PAGE === "corners") (window.__ACC.ok ? pageCorners(D) : verrou("corners"));
+        if (PAGE === "exotiques") (window.__ACC.ok ? pageExotiques() : verrou("exotiques"));
         if (PAGE === "bilan") pageBilan(D);
         setTimeout(demarrerLive, 4000);
-      } else if (!window.__ACC.ok && (PAGE === "selections" || PAGE === "corners")) {
+      } else if (!window.__ACC.ok && (PAGE === "selections" || PAGE === "exotiques")) {
         verrou(PAGE);
       }
     }
