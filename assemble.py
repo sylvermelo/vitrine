@@ -7,6 +7,11 @@ autre URL GitHub Pages). Ici on :
   • rewrite la navigation bas de page (href réels entre les pages) ;
   · branche les boutons héros et le bouton compte du header.
 """
+import sys
+
+print("STOP_PIPELINE — le 10/09/2026, les pages docs/ sont devenues la source\n"      "du design vitrine (refonte complète). Ne plus régénérer depuis src/ :\n"      les exports Stitch écraseraient la refonte. Ce script est conservé\n"      pour mémoire uniquement.")
+sys.exit(1)
+
 import os
 import re
 

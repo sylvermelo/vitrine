@@ -76,19 +76,24 @@
     return false;
   }
   function banniere(msg) {
-    const b = document.createElement("div");
-    b.className = "mx-gutter-base mt-gutter-base rounded-xl p-gutter-base " +
-      "bg-error-container/30 border border-error-container text-on-error-container " +
-      "font-body-sm text-body-sm";
-    b.textContent = msg;
-    const main = document.querySelector("main");
-    if (main) main.prepend(b);
+    const d = document.createElement("div");
+    d.className = "err";
+    d.style.margin = "0 0 4px";
+    d.innerHTML = msg;
+    const m = document.querySelector("main");
+    if (m) m.prepend(d);
   }
 
-  /* Au retour d'une connexion Google, la session met un instant à
-     s'installer (jeton dans l'URL). Attendre la fin de la détection avant
-     de décider « pas connecté » — sinon la page redemande de se connecter
-     juste après un retour réussi. */
+  const NOMBEAU = {
+    safe: "SAFE DU JOUR", safe_weekend: "SAFE WEEK-END", risque: "COMBINÉ RISQUE",
+    cote2: "COTE 2 DU JOUR", cote5: "COTE 5 DU JOUR", fun: "COMBINÉ FUN",
+    corners_montante: "COUPON CORNERS MONTANTE", safe_2: "SAFE 2 · RATTRAPAGE",
+  };
+  const nomBeau = (nom) => {
+    if (NOMBEAU[nom]) return NOMBEAU[nom];
+    const m = /^safe_(\d+)$/.exec(nom || "");
+    return m ? `SAFE ${m[1]} · RATTRAPAGE` : (nom || "").replace(/_/g, " ");
+  };
   async function sessionPret() {
     if (!SB) return;
     try {
@@ -119,115 +124,70 @@
   }
 
   function carteVerrou(raison) {
-    const txt = raison === "sans-abonnement"
-      ? "Ton compte est connecté mais aucun abonnement actif n'y est rattaché."
-      : "Les conseils du jour — sélections, combinés, coupon corners — sont réservés aux abonnés.";
-    return `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
-      <div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary">lock</span>
-      <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">Zone abonnés</span></div>
-      <div class="font-headline-md text-headline-md text-on-surface">Conseils réservés aux abonnés</div>
-      <div class="font-body-sm text-body-sm text-on-surface-variant">${txt}
-      L'historique et le bilan restent publics, pour la confiance. 30 jours d'accès, sans engagement.</div>
-      <div class="flex gap-2">${raison === "sans-abonnement"
-        ? `<a href="activation.html" class="flex-1 text-center bg-primary text-on-primary py-2.5 rounded-lg font-headline-sm text-headline-sm">Activer mon compte</a>`
-        : `<a href="connexion.html" class="flex-1 text-center bg-primary text-on-primary py-2.5 rounded-lg font-headline-sm text-headline-sm">Se connecter</a>`}
-      <a href="acces.html" class="flex-1 text-center bg-surface-container-high text-on-surface py-2.5 rounded-lg font-headline-sm text-headline-sm">Voir l'accès</a></div></div>`;
+    return `<div class="lock">
+      <div class="ic">🔒</div>
+      <h2 style="margin:8px 0 6px">Contenu abonnés</h2>
+      <div class="small ink2">${esc(raison || "Les conseils du jour — sélections, combinés, coupon corners — sont réservés aux abonnés.")}</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+        <a class="btn" href="activation.html">Activer via WhatsApp</a>
+        <a class="btn ghost" href="connexion.html">J'ai déjà un compte</a>
+      </div></div>`;
   }
 
   function verrou(page) {
-    const raison = (window.__ACC || {}).raison || "anon";
-    if (page === "selections") {
-      const z1 = zone("z-list", "Liverpool", CARTE);
-      if (z1) z1.innerHTML = carteVerrou(raison);
-      const z2 = zone("z-comb", "SAFE DU JOUR", CARTE);
-      if (z2) z2.innerHTML = "";
-      const t = document.getElementById("v-tabs"); if (t) t.style.display = "none";
-      const ch = document.getElementById("z-chips"); if (ch) ch.style.display = "none";
-    } else {
-      const z = zone("z-legs", "Aston Villa vs Wolves", CARTE);
-      if (z) { z.className = "flex flex-col gap-gutter-sm"; z.innerHTML = carteVerrou(raison); }
-      setTexte("c-cote", "—"); setTexte("c-proba", "—");
-      majTexte("1.85", "—", true); majTexte("54 %", "—", true);
-    }
+    const m = document.getElementById("z-contenu") || document.querySelector("main");
+    if (m) m.innerHTML = carteVerrou(window.__ACC && window.__ACC.raison === "sans-abonnement"
+      ? "Sélections, combinés et coupon corners sont réservés aux abonnés actifs (30 jours)."
+      : undefined);
   }
-
-  /* ---------------------------------------------------------- gabarits */
-  const PILL = "px-2 py-1 bg-surface-container-highest text-primary font-metric-xs " +
-    "text-metric-xs tracking-wider uppercase whitespace-nowrap";
-  const NOMBEAU = {
-    safe: "SAFE DU JOUR", safe_weekend: "SAFE WEEK-END", risque: "COMBINÉ RISQUE",
-    cote2: "COTE 2 DU JOUR", cote5: "COTE 5 DU JOUR", fun: "COMBINÉ FUN",
-    corners_montante: "COUPON CORNERS MONTANTE", safe_2: "SAFE 2 · RATTRAPAGE",
-  };
-  const nomBeau = (nom) => {
-    if (NOMBEAU[nom]) return NOMBEAU[nom];
-    const m = /^safe_(\d+)$/.exec(nom || "");
-    return m ? `SAFE ${m[1]} · RATTRAPAGE` : (nom || "").replace(/_/g, " ");
-  };
 
   function ligneSelection(s) {
     const verdict = s.touche == null ? "" :
-      `<span class="${s.touche ? "text-secondary" : "text-error"} font-metric-xs text-metric-xs">` +
+      `<span class="tiny ${s.touche ? "em" : "rd"}" style="font-weight:700">` +
       `${s.touche ? "✓ TOUCHÉE" : "✗ MANQUÉE"} ${s.buts_home ?? ""}-${s.buts_away ?? ""}</span>`;
-    return `<div class="p-gutter-base hover:bg-surface-container-high/40 transition-colors flex flex-col space-y-gutter-xs">
-      <div class="flex items-center justify-between gap-2">
-        <span class="font-label-micro text-label-micro uppercase tracking-widest text-outline">${esc((s.ligue || s.div || "").toUpperCase())} · ${esc(s.jour)}${s.heure ? " · " + esc(s.heure) : ""}</span>
-        <span class="${PILL}">${esc(s.option)}</span>
+    const live = s.touche == null ? badgeLive(s.div, s.home, s.away) : "";
+    return `<div class="mrow">
+      <div class="l">
+        <div class="tiny mut">${esc((s.ligue || s.div || "").toUpperCase())} · ${esc(s.jour)}${s.heure ? " · " + esc(s.heure) : ""}</div>
+        <div class="t" title="${esc(s.home)} vs ${esc(s.away)}">${esc(s.home)} <span class="mut">vs</span> ${esc(s.away)}</div>
+        <div style="margin-top:3px"><span class="chip">${esc(s.option)}</span></div>
+        <div style="margin-top:3px">${verdict}${live ? `<span class="live-score tiny cy" style="display:block" data-div="${esc(s.div || "")}" data-jour="${esc(s.jour || "")}" data-home="${esc(s.home || "")}" data-away="${esc(s.away || "")}">${esc(live)}</span>` : ""}</div>
       </div>
-      <div class="flex items-end justify-between gap-2">
-        <div class="min-w-0">
-          <div class="font-headline-md text-headline-md text-on-surface truncate">${esc(s.home)} vs ${esc(s.away)}</div>
-          <div class="font-body-xs text-body-xs text-on-surface-variant">${verdict || (s.confiance ? "confiance " + esc(s.confiance) : "&nbsp;")}</div>
-          ${s.touche == null ? `<span class="live-score font-metric-xs text-metric-xs text-primary" style="display:${badgeLive(s.div, s.home, s.away) ? "block" : "none"}" data-div="${esc(s.div || "")}" data-jour="${esc(s.jour || "")}" data-home="${esc(s.home || "")}" data-away="${esc(s.away || "")}">${esc(badgeLive(s.div, s.home, s.away))}</span>` : ""}
-        </div>
-        <div class="text-right shrink-0">
-          <div class="font-metric-md text-metric-md text-secondary">${pct(s.p)}</div>
-          <div class="font-metric-xs text-metric-xs text-on-surface-variant">cote juste ${f2(s.cote_juste)}</div>
-        </div>
-      </div>
-    </div>`;
+      <div class="r">
+        <div class="pct em" style="font-family:var(--f-disp);font-weight:800;font-size:17px">${pct(s.p)}</div>
+        <div class="tiny mut">cote juste ${f2(s.cote_juste)}</div>
+        ${s.confiance ? `<div class="tiny mut">conf. ${esc(s.confiance)}</div>` : ""}
+      </div></div>`;
   }
 
   function carteCombine(c) {
-    const jambesToutes = c.jambes || [];
-    const resolues = jambesToutes.filter((l) => l.resultat && l.resultat.touche != null);
+    const jambes = c.jambes || [];
+    const resolues = jambes.filter((l) => l.resultat && l.resultat.touche != null);
     const perdues = resolues.filter((l) => !l.resultat.touche).length;
     const etat = c.touche != null
-      ? (c.touche
-        ? `<span class="px-2 py-1 bg-secondary-container/30 text-secondary font-metric-xs text-metric-xs uppercase">✓ validé</span>`
-        : `<span class="px-2 py-1 bg-error-container/30 text-error font-metric-xs text-metric-xs uppercase">✗ perdu</span>`)
-      : perdues
-        ? `<span class="px-2 py-1 bg-error-container/30 text-error font-metric-xs text-metric-xs uppercase">✗ perdu (${resolues.length}/${jambesToutes.length} jouées)</span>`
-        : resolues.length
-          ? `<span class="${PILL}">EN COURS ${resolues.length}/${jambesToutes.length}</span>`
-          : `<span class="${PILL}">EN ATTENTE</span>`;
-    const jambes = jambesToutes.slice(0, 10).map((l) => {
+      ? (c.touche ? `<span class="pill em">✓ validé</span>` : `<span class="pill rd">✗ perdu</span>`)
+      : perdues ? `<span class="pill rd">✗ perdu (${resolues.length}/${jambes.length})</span>`
+      : resolues.length ? `<span class="pill am">en cours ${resolues.length}/${jambes.length}</span>`
+      : `<span class="pill mu">en attente</span>`;
+    const lignes = jambes.slice(0, 10).map((l) => {
       const r = l.resultat || {};
-      const verdict = r.touche == null ? "" :
-        ` <span class="${r.touche ? "text-secondary" : "text-error"} font-bold">${r.touche ? "✓" : "✗"} ${r.buts_home ?? ""}-${r.buts_away ?? ""}</span>`;
-      return `<div class="flex justify-between gap-2 font-metric-xs text-metric-xs text-on-surface-variant">
-         <span class="truncate">· ${esc(l.home)} vs ${esc(l.away)} — ${esc(l.option)}${verdict}</span>
-         <span class="shrink-0">${l.p ? pct(l.p) : ""}</span></div>`;
+      const v = r.touche == null ? "" :
+        ` <b class="${r.touche ? "em" : "rd"}">${r.touche ? "✓" : "✗"} ${r.buts_home ?? ""}-${r.buts_away ?? ""}</b>`;
+      return `<div class="mrow"><div class="l"><div class="t small" title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
+        <div class="tiny mut">${esc(l.option)}${v}</div></div>
+        <div class="r">${l.p ? `<span class="pct small em">${pct(l.p)}</span>` : ""}</div></div>`;
     }).join("");
-    const origine = (c.brut && c.brut.origine)
-      ? `<div class="font-body-xs text-body-xs text-error border border-error-container/40 rounded-lg p-2">${esc(c.brut.origine)}</div>` : "";
-    return `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
-      <div class="flex items-center justify-between">
-        <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">${esc(nomBeau(c.nom))}</span>
-        ${etat}
-      </div>
+    const origine = (c.brut && c.brut.origine) ? `<div class="err small" style="margin-bottom:8px">${esc(c.brut.origine)}</div>` : "";
+    return `<div class="card">
+      <div class="hd"><span class="lbl ind">${esc(nomBeau(c.nom))}</span>${etat}</div>
       ${origine}
-      <div class="flex items-end justify-between">
-        <div><div class="font-metric-display text-metric-display text-on-surface leading-none">${f2(c.cote)}</div>
-        <div class="font-metric-xs text-metric-xs text-on-surface-variant">cote totale</div></div>
-        <div class="text-right"><div class="font-metric-md text-metric-md text-primary">${pct(c.p_combine)}</div>
-        <div class="font-metric-xs text-metric-xs text-on-surface-variant">proba combinée</div></div>
+      <div class="kpis" style="grid-template-columns:1fr 1fr">
+        <div class="kpi"><div class="v num">${f2(c.cote)}</div><div class="d">cote totale</div></div>
+        <div class="kpi"><div class="v num cy">${pct(c.p_combine)}</div><div class="d">proba combinée</div></div>
       </div>
-      <div class="flex flex-col gap-1">${jambes}</div>
-    </div>`;
+      <div style="margin-top:6px">${lignes}</div></div>`;
   }
 
-  /* ---------------------------------------------------------- données */
   async function charge() {
     if (!CFG.SUPABASE_URL || !CFG.SUPABASE_ANON_KEY || CFG.SUPABASE_ANON_KEY === "A_COLLER") {
       banniere("Vitrine non connectée : clé publique Supabase absente de assets/config.js.");
@@ -282,6 +242,7 @@
       String(P.promo.jusquau).slice(0, 10) >= aujourdHui());
     return P;
   }
+
   async function appliquerPrixPaiement() {
     const main = document.querySelector("main");
     if (!main) return;
@@ -327,6 +288,7 @@
     "county", "north end", "albion", "fc", "afc", "cf", "sk", "bk", "sc", "sv",
     "vfl", "vfb", "ac", "as", "ss", "rc", "sl", "kv", "ksc", "bsc", "fk", "ik",
     "if", "amsterdam", "foot"];
+
   function normEq(s) {
     let x = String(s || "").toLowerCase().normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
@@ -414,230 +376,298 @@
      selections/combines) — si rien n'est archivé, la carte le dit. */
   function carteVeille(D) {
     const h = hier();
-    const selHier = D.sel.filter((s) => s.jour === h && s.touche != null);
-    const tHier = selHier.filter((s) => s.touche).length;
-    /* « SAFE » = le SAFE DU JOUR uniquement (nom exact). Le SAFE WEEK-END et
-       le SAFE 2 sont des produits distincts : les mélanger fausse les
-       compteurs (bug du 06/09 : week-end manqué affiché à la place du jour). */
-    const safes = D.comb.filter((c) => c.nom === "safe" && c.touche != null);
-    const tSafe = safes.filter((c) => c.touche).length;
-    const safeHier = D.comb.find((c) => c.jour === h && c.nom === "safe");
-    const safe2Hier = D.comb.find((c) => c.jour === h && c.nom === "safe_2");
-
-    let blocSafe;
-    if (safeHier) {
-      const v = safeHier.touche == null
-        ? `<span class="${PILL}">EN ATTENTE</span>`
-        : safeHier.touche
-          ? `<span class="px-2 py-1 bg-secondary-container/30 text-secondary font-metric-xs text-metric-xs uppercase">✓ passé</span>`
-          : `<span class="px-2 py-1 bg-error-container/30 text-error font-metric-xs text-metric-xs uppercase">✗ manqué</span>`;
-      const jambes = (safeHier.jambes || []).slice(0, 4).map((l) => {
-        const r = l.resultat || {};
-        const etat = r.touche == null ? "" :
-          ` <span class="${r.touche ? "text-secondary" : "text-error"}">${r.touche ? "✓" : "✗"} ${r.buts_home ?? ""}-${r.buts_away ?? ""}</span>`;
-        return `<div class="flex justify-between gap-2 font-metric-xs text-metric-xs text-on-surface-variant">
-          <span class="truncate">· ${esc(l.home)} vs ${esc(l.away)} — ${esc(l.option)}${etat}</span>
-          <span class="shrink-0">${l.p ? pct(l.p) : ""}</span></div>`;
-      }).join("");
-      const l2 = safe2Hier
-        ? `<div class="font-body-xs text-body-xs ${safe2Hier.touche == null ? "text-on-surface-variant" : safe2Hier.touche ? "text-secondary" : "text-error"}">SAFE 2 · rattrapage : ${safe2Hier.touche == null ? "en cours" : safe2Hier.touche ? "✓ passé" : "✗ manqué"}</div>`
-        : "";
-      blocSafe = `<div class="flex items-center justify-between gap-2">
-          <span class="font-headline-md text-headline-md text-on-surface">SAFE du ${esc(dateFr(h))}</span>${v}</div>
-        <div class="flex flex-col gap-1">${jambes}</div>${l2}`;
-    } else {
-      blocSafe = `<div class="font-headline-md text-headline-md text-on-surface">Pas de SAFE hier</div>
-        <div class="font-body-xs text-body-xs text-on-surface-variant">Le robot s'abstient quand la qualité n'y est pas — c'est aussi ça, la discipline.</div>`;
+    const sel = D.sel.filter((s) => (s.jour || "") === h && s.touche != null);
+    const safe = D.comb.filter((c) => estSafe(c) && (c.jour || "") === h)[0];
+    if (!sel.length && !safe) {
+      return `<div class="card"><div class="hd"><span class="lbl">Hier — ${esc(dateFr(h))}</span></div>
+        <div class="small mut">Rien d'archivé pour la veille : le robot n'avait rien proposé,
+        ou les résultats ne sont pas encore résolus.</div></div>`;
     }
-
-    const compteur = (gros, petit, sous, couleur) => `<div class="bg-surface-container p-gutter-sm rounded-lg flex flex-col">
-      <span class="font-metric-display text-metric-lg ${couleur || "text-primary"} leading-none">${gros}</span>
-      <span class="font-label-micro text-label-micro text-on-surface-variant uppercase tracking-wider mt-gutter-xs">${petit}</span>
-      <span class="font-metric-xs text-metric-xs text-on-surface-variant">${sous}</span></div>`;
-
-    const pcHier = selHier.length ? Math.round(100 * tHier / selHier.length) + " %" : "—";
-    const pcSafe = safes.length ? Math.round(100 * tSafe / safes.length) + " % de réussite" : "archive vide";
-    /* COTE 2 / COTE 5 : uniquement la veille */
-    const etatComb = (c) => {
-      if (!c) return { gros: "—", sous: "pas publié hier", couleur: "text-outline" };
-      const legs = c.jambes || [];
-      const res = legs.filter((l) => l.resultat && l.resultat.touche != null);
-      const perdu = c.touche === false || res.some((l) => !l.resultat.touche);
-      if (perdu) return { gros: "✗", sous: "manqué hier", couleur: "text-error" };
-      if (c.touche === true) return { gros: "✓", sous: `passé (${legs.length} jambes)`, couleur: "text-secondary" };
-      if (res.length) return { gros: `${res.length}/${legs.length}`, sous: "en cours", couleur: "text-primary" };
-      return { gros: "—", sous: "en attente", couleur: "text-outline" };
-    };
-    const e2 = etatComb(D.comb.find((c) => c.nom === "cote2" && c.jour === h));
-    const e5 = etatComb(D.comb.find((c) => c.nom === "cote5" && c.jour === h));
-    return `<div id="z-veille" class="mx-gutter-base mt-gutter-sm rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
-      <span class="font-label-micro text-label-micro uppercase tracking-widest text-primary">Résultats d'hier · ${esc(h)}</span>
-      ${blocSafe}
-      <div class="grid grid-cols-2 gap-gutter-sm">
-        ${compteur(selHier.length ? `${tHier}/${selHier.length}` : "—", "Conseils touchés hier", pcHier, "text-primary")}
-        ${compteur(e2.gros, "Cote 2 hier", e2.sous, e2.couleur)}
-        ${compteur(safes.length ? `${tSafe}/${safes.length}` : "—", "SAFE passés depuis le lancement", pcSafe, "text-primary")}
-        ${compteur(e5.gros, "Cote 5 hier", e5.sous, e5.couleur)}
-      </div></div>`;
+    const t = sel.filter((s) => s.touche).length;
+    const etatSafe = safe ? (safe.touche == null ? `<span class="pill am">en cours</span>`
+      : safe.touche ? `<span class="pill em">✓ safe validé</span>` : `<span class="pill rd">✗ safe manqué</span>`) : "";
+    return `<div class="card"><div class="hd"><span class="lbl">Hier — ${esc(dateFr(h))}</span>${etatSafe}</div>
+      <div class="kpis" style="grid-template-columns:1fr 1fr">
+        <div class="kpi"><div class="v num ${t === sel.length && sel.length ? "em" : ""}">${t}/${sel.length || 0}</div><div class="d">conseils touchés</div></div>
+        <div class="kpi"><div class="v num">${sel.length ? Math.round(100 * t / sel.length) + " %" : "—"}</div><div class="d">réussite du jour</div></div>
+      </div>
+      <div style="margin-top:4px">${sel.map((s) => `<div class="mrow"><div class="l">
+        <div class="t small" title="${esc(s.home)} vs ${esc(s.away)}">${esc(s.home)} <span class="mut">vs</span> ${esc(s.away)}</div>
+        <div class="tiny mut">${esc(s.option)}</div></div>
+        <div class="r"><b class="${s.touche ? "em" : "rd"}">${s.touche ? "✓" : "✗"} ${s.buts_home ?? ""}-${s.buts_away ?? ""}</b></div></div>`).join("")}</div></div>`;
   }
 
+  /* ---------------------------------------------- coquille (header + nav) */
+  const ICONES = {
+    accueil: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1z"/></svg>',
+    selections: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+    corners: '<svg viewBox="0 0 24 24"><path d="M5 21V4h5l1 3h8"/></svg>',
+    series: '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
+    bilan: '<svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg>',
+  };
+  const NAV = [["accueil", "index.html", "Accueil"], ["selections", "selections.html", "Sélections"],
+    ["corners", "corners.html", "Corners"], ["series", "series.html", "Séries"],
+    ["bilan", "bilan.html", "Bilan"]];
+
+  function coquille() {
+    const h = document.getElementById("hdr");
+    if (h) h.innerHTML = `<div class="in">
+      <div class="brand"><img src="assets/logo.png" alt="Pronos Foot">
+        <div style="min-width:0"><div class="t1">PRONOS<b>FOOT</b></div>
+        <div class="t2"><span class="dot"></span>robot mathématique · sync</div></div></div>
+      <button id="v-compte" class="hbtn" title="Connexion" aria-label="Compte">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      </button></div>`;
+    const n = document.getElementById("bnav");
+    if (n) n.innerHTML = `<div class="in">${NAV.map(([id, href, lb]) =>
+      `<a href="${href}" class="${PAGE === id ? "on" : ""}">${ICONES[id]}<span>${lb}</span></a>`).join("")}</div>`;
+  }
+
+  /* ---------------------------------------------------------- accueil */
   function pageAccueil(D) {
-    const auj = aujourdHui();
-    let sels = D.sel.filter((s) => s.jour === auj);
-    let jour = auj;
-    if (!sels.length) {
-      const futur = [...new Set(D.sel.map((s) => s.jour))].filter((j) => j >= auj).sort();
-      jour = futur[0] || (D.sel[0] ? D.sel[0].jour : auj);
-      sels = D.sel.filter((s) => s.jour === jour);
-    }
-    sels = sels.sort((a, b) => (b.p || 0) - (a.p || 0)).slice(0, 3);
-    const accOk = (window.__ACC || {}).ok;
-    const z = zone("z-sel", null, null);
-    if (z) {
-      z.className = "divide-y divide-surface-container-low flex flex-col";
-      z.innerHTML = sels.length && accOk ? sels.map(ligneSelection).join("") : carteVerrou((window.__ACC || {}).raison || "anon");
-    }
+    const z = document.getElementById("z-contenu");
+    if (!z) return;
     const resolues = D.sel.filter((s) => s.touche != null);
     const touches = resolues.filter((s) => s.touche).length;
-    if (resolues.length) {
-      const t = Math.round(100 * touches / resolues.length) + " %";
-      if (!setTexte("a-hit", t)) majTexte("78 %", t, true);
-    }
-    /* carte « HIER » : insérée sous la grille des 3 stats */
-    const vieille = document.getElementById("z-veille");
-    if (vieille) vieille.remove();
-    const ancre = document.getElementById("a-hit");
-    const grille = ancre && ancre.closest(".grid");
-    const carte = document.createElement("div");
-    carte.innerHTML = carteVeille(D);
-    const noeud = carte.firstElementChild;
-    if (grille && grille.parentElement) grille.insertAdjacentElement("afterend", noeud);
-    else { const m = document.querySelector("main"); if (m) m.prepend(noeud); }
-    majTexte("Source ESPN", `source ESPN · ${touches}/${resolues.length} vérifiées`);
-  }
-
-  function pageSelections(D) {
-    const auj = aujourdHui();
-    const jours = [...new Set(D.sel.map((s) => s.jour).concat(D.comb.map((c) => c.jour)))]
-      .filter(Boolean).sort().reverse();
-    let jour = jours.find((j) => j >= auj) || jours[0] || auj;
-    let onglet = "conseils";
-    const zListe = zone("z-list", "Liverpool", CARTE);
-    const zComb = zone("z-comb", "SAFE DU JOUR", CARTE);
-    const zChips = document.getElementById("z-chips");
-    const tabs = [...document.querySelectorAll("#v-tabs [data-tab]")];
-    const TAB_ACT = "filter-tab py-1.5 rounded text-center font-label-micro text-label-micro " +
-      "uppercase tracking-wider transition-all bg-surface-container-highest text-primary font-bold shadow-sm";
-    const TAB_INA = "filter-tab py-1.5 rounded text-center font-label-micro text-label-micro " +
-      "uppercase tracking-wider transition-all text-outline hover:text-on-surface font-semibold";
-    const combsJour = (filtre) => D.comb.filter((c) => c.jour === jour &&
-      c.nom !== "corners_montante" && filtre(c));
-    const carteVide = (txt) => `<div class="rounded-xl bg-surface-container-low p-gutter-base ` +
-      `font-body-sm text-body-sm text-on-surface-variant">${txt}</div>`;
-    function rend() {
-      tabs.forEach((b) => { b.className = b.dataset.tab === onglet ? TAB_ACT : TAB_INA; });
-      const n = {
-        conseils: D.sel.filter((s) => s.jour === jour).length,
-        safe: combsJour((c) => /safe/.test((c.nom || "").toLowerCase())).length,
-        cote2: combsJour((c) => c.nom === "cote2").length,
-        cote5: combsJour((c) => c.nom === "cote5").length,
-      };
-      const LIB = { conseils: "Conseils", safe: "SAFE", cote2: "Cote 2", cote5: "Cote 5" };
-      tabs.forEach((b) => {
-        const k = b.dataset.tab;
-        b.textContent = n[k] ? `${LIB[k]} (${n[k]})` : LIB[k];
-      });
-      if (zListe) zListe.innerHTML = "";
-      if (zComb) zComb.innerHTML = "";
-      if (onglet === "conseils") {
-        const sels = D.sel.filter((s) => s.jour === jour).sort((a, b) => (b.p || 0) - (a.p || 0));
-        if (zListe) zListe.innerHTML = sels.length
-          ? `<div class="divide-y divide-surface-container-low flex flex-col rounded-xl overflow-hidden bg-surface-container-low">${sels.map(ligneSelection).join("")}</div>`
-          : carteVide("Aucune sélection ce jour-là — le robot s'abstient quand la qualité n'y est pas.");
-      } else {
-        const filtre = onglet === "safe"
-          ? (c) => /safe/.test((c.nom || "").toLowerCase())
-          : (c) => c.nom === onglet;
-        const cs = combsJour(filtre).sort((a, b) => (b.p_combine || 0) - (a.p_combine || 0));
-        if (zComb) zComb.innerHTML = cs.length
-          ? cs.map(carteCombine).join("")
-          : carteVide(onglet === "safe"
-            ? `Aucun SAFE le ${jour} — le robot s'abstient quand la qualité n'y est pas.`
-            : `Aucun combiné « ${LIB[onglet]} » le ${jour}.`);
-      }
-      if (zChips) {
-        zChips.innerHTML = jours.slice(0, 14).map((j) =>
-          `<button data-j="${j}" class="px-3 py-1.5 rounded-lg font-metric-xs text-metric-xs whitespace-nowrap ${j === jour ? "bg-primary-container text-on-primary-container" : "bg-surface-container-high text-on-surface-variant"}">${j === auj ? "AUJOURD'HUI" : j.slice(5)}</button>`).join("");
-        zChips.querySelectorAll("button").forEach((b) =>
-          b.onclick = () => { jour = b.dataset.j; rend(); });
-      }
-    }
-    tabs.forEach((b) => b.onclick = () => { onglet = b.dataset.tab; rend(); });
-    rend();
-  }
-
-  function pageCorners(D) {
+    const taux = resolues.length ? Math.round(100 * touches / resolues.length) : null;
+    const auj = new Date().toISOString().slice(0, 10);
+    const duJour = D.sel.filter((s) => (s.jour || "") === auj);
+    const vol = (D.bilan && D.bilan.volume) || {};
+    z.innerHTML = `
+      <div class="card foc">
+        <div class="hd"><span class="lbl">Terminal du jour</span><span class="pill cy"><span class="dot"></span>sync</span></div>
+        <h1 style="font-size:1.45rem">Le robot mathématique<br>du football</h1>
+        <div class="small ink2" style="margin:6px 0 12px">Moteur Dixon-Coles calibré en walk-forward sur
+          des dizaines de milliers de matchs réels. Pas d'intelligence artificielle : des probabilités
+          mesurées, des limites affichées, aucune promesse de gain.</div>
+        <div class="kpis">
+          <div class="kpi"><div class="v num">${vol.total_matchs ? vol.total_matchs.toLocaleString("fr-FR") : "—"}</div><div class="d">matchs réels en base</div></div>
+          <div class="kpi"><div class="v num ${taux != null ? "em" : ""}">${taux != null ? taux + " %" : "—"}</div><div class="d">conseils touchés (${touches}/${resolues.length})</div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+          <a class="btn" href="selections.html">Voir les sélections du jour</a>
+          <a class="btn ghost" href="series.html">Buts d'affilée — nouveau</a>
+        </div>
+      </div>
+      <div class="card"><div class="hd"><span class="lbl">Aujourd'hui</span>
+        <span class="pill ind">${duJour.length} conseil${duJour.length > 1 ? "s" : ""}</span></div>
+        ${duJour.length ? duJour.slice(0, 4).map(ligneSelection).join("")
+        : `<div class="small mut">Aucun conseil aujourd'hui : aucun match n'atteint les seuils
+           mesurés. Le robot s'abstient plutôt que de forcer — ce n'est pas un bug.</div>`}
+      </div>
+      ${carteVeille(D)}
+      <div id="z-series-teaser"></div>
+      <div id="z-corners-teaser"></div>`;
+    teaserSeries();
     const cp = D.comb.filter((c) => c.nom === "corners_montante")
       .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""))[0];
-    const z = zone("z-legs", "Aston Villa vs Wolves", CARTE);
-    if (!cp) {
-      setTexte("c-cote", "—"); setTexte("c-proba", "—");
-      if (z) z.innerHTML = `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-2">
-        <div class="font-headline-md text-headline-md text-on-surface">AUCUN COUPON CE JOUR</div>
-        <div class="font-body-sm text-body-sm text-on-surface-variant">Aucun match n'atteint 85 % de fréquence
-        réelle mesurée sur son meilleur handicap corners. Mieux vaut sauter un jour que forcer —
-        discipline algorithmique absolue.</div></div>`;
-      return;
-    }
-    if (!setTexte("c-cote", f2(cp.cote))) majTexte("1.85", f2(cp.cote), true);
-    if (!setTexte("c-proba", pct(cp.p_combine))) majTexte("54 %", pct(cp.p_combine), true);
-    const titre = feuilleParTexte("COUPON MONTANTE");
-    if (titre && cp.jour) titre.textContent = "COUPON MONTANTE — " + cp.jour;
-    if (z) {
-      z.className = "flex flex-col gap-gutter-sm";
-      let mise = 1;
-      const jambes = (cp.jambes || []).map((l, i) => {
-        const c = l.cote || (l.p_cal ? 1 / l.p_cal : null);
-        const apres = c ? mise * c : null;
-        const html = `<div class="rounded-xl bg-surface-container-low p-gutter-base flex flex-col gap-gutter-sm shadow-sm">
-          <div class="flex items-center justify-between">
-            <span class="font-metric-md text-metric-md text-primary">${String(i + 1).padStart(2, "0")}
-              <span class="font-metric-xs text-metric-xs text-on-surface-variant">${esc(l.heure || "")}</span></span>
-            <span class="font-label-micro text-label-micro uppercase tracking-widest text-outline">${esc(String(l.ligue || "").slice(0, 12))}</span>
-          </div>
-          <div class="font-headline-md text-headline-md text-on-surface">${esc(l.home)} vs ${esc(l.away)}</div>
-          <span class="${PILL} self-start">${esc(l.option)}</span>
-          <div class="flex items-center justify-between font-metric-xs text-metric-xs">
-            <span class="text-on-surface-variant">annonce <s>${pct(l.p_brut)}</s> → <span class="text-secondary">${pct(l.p_cal)}</span></span>
-            <span class="text-on-surface-variant">cote juste ${f2(c)}</span>
-          </div>
-          <div class="font-metric-xs text-metric-xs text-on-surface-variant">mise ${f2(mise)} u → <span class="text-on-surface">${f2(apres)} u</span></div>
-        </div>`;
-        if (c) mise = apres;
-        return html;
-      }).join("");
-      z.innerHTML = jambes +
-        `<div class="rounded-xl bg-surface-container-low p-gutter-base font-metric-md text-metric-md text-secondary">Si tout passe : ${f2(mise)} u récupérées</div>`;
-    }
+    const zc = document.getElementById("z-corners-teaser");
+    if (zc) zc.innerHTML = cp ? `<div class="card"><div class="hd"><span class="lbl">Coupon corners montante</span>
+        <span class="pill em">actif</span></div>
+        <div class="mrow"><div class="l"><div class="t">${(cp.jambes || []).length} jambes · ${esc(cp.jour || "")}</div>
+        <div class="tiny mut">chaque jambe ≥ 85 % de fréquence réelle mesurée</div></div>
+        <div class="r"><div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:17px">${f2(cp.cote)}</div>
+        <div class="tiny mut">proba ${pct(cp.p_combine)}</div></div></div>
+        <a class="btn ghost" style="margin-top:10px" href="corners.html">Ouvrir le coupon corners</a></div>`
+      : `<div class="card"><div class="hd"><span class="lbl">Coupon corners montante</span></div>
+         <div class="small mut">Pas de coupon corners aujourd'hui : aucun match n'atteint 85 % de
+         fréquence réelle mesurée. Mieux vaut sauter un jour que forcer.</div></div>`;
   }
 
+  function teaserSeries() {
+    const z = document.getElementById("z-series-teaser");
+    if (!z) return;
+    chargeSeries().then((S) => {
+      if (!S || !S.matchs || !S.matchs.length) {
+        z.innerHTML = `<div class="card"><div class="hd"><span class="lbl">Buts d'affilée</span></div>
+          <div class="small mut">Pas de match aujourd'hui dans le calendrier du robot.</div></div>`;
+        return;
+      }
+      const top = S.matchs.slice(0, 3);
+      z.innerHTML = `<div class="card hi"><div class="hd"><span class="lbl">Buts d'affilée — aujourd'hui</span>
+        <span class="pill cy">nouveau</span></div>
+        ${top.map((m) => `<div class="mrow"><div class="l">
+          <div class="t" title="${esc(m.home)} vs ${esc(m.away)}">${esc(m.home)} <span class="mut">vs</span> ${esc(m.away)}</div>
+          <div class="tiny mut">${esc(m.ligue)}${m.heure ? " · " + esc(m.heure) : ""}</div></div>
+          <div class="r"><div class="tiny mut">2 d'affilée : <b class="ink2">non</b></div>
+          <div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:16px">${pct(1 - m.s2)}</div></div></div>`).join("")}
+        <div class="tiny mut" style="margin-top:8px">« non » = aucune équipe ne marque 2 buts de suite.
+          Information chiffrée, jamais un conseil.</div>
+        <a class="btn ghost" style="margin-top:10px" href="series.html">Tout voir : match, domicile, extérieur</a></div>`;
+    });
+  }
+
+  /* ---------------------------------------------------------- séries */
+  let SERIES_CACHE = null;
+  function chargeSeries() {
+    if (SERIES_CACHE) return Promise.resolve(SERIES_CACHE);
+    return fetch("../pronos-foot/series_jour.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { SERIES_CACHE = d; return d; })
+      .catch(() => null);
+  }
+
+  function pageSeries() {
+    const z = document.getElementById("z-contenu");
+    if (!z) return;
+    z.innerHTML = `<div class="card"><div class="hd"><span class="lbl">Chargement…</span></div>
+      <div class="small mut">Lecture des probabilités du jour.</div></div>`;
+    chargeSeries().then((S) => {
+      if (!S) {
+        z.innerHTML = `<div class="err">Impossible de lire les séries du jour
+          (fichier robot injoignable). Réessayez dans quelques minutes.</div>`;
+        return;
+      }
+      const nonOui = (x) => x == null ? `<span class="mut">—</span>`
+        : `<b class="ink2 num">${pct(1 - x)}</b><div class="tiny mut">oui ${pct(x)}</div>`;
+      const ligne = (m) => `<tr>
+        <td class="tiny">${esc(m.heure || "—")}</td>
+        <td class="tname" title="${esc(m.home)} vs ${esc(m.away)}">${esc(m.home)} – ${esc(m.away)}<div class="tiny mut">${esc(m.ligue)}</div></td>
+        <td class="n">${nonOui(m.s2)}</td><td class="n">${nonOui(m.s3)}</td>
+        <td class="n">${nonOui(m.s2d)}</td><td class="n">${nonOui(m.s2e)}</td></tr>`;
+      const safe = S.safe && S.safe.length ? `<div class="card foc"><div class="hd">
+          <span class="lbl em">Safe du jour — buts d'affilée</span>
+          <span class="pill em">${S.safe.length} jambe${S.safe.length > 1 ? "s" : ""}</span></div>
+        ${S.safe.map((l) => `<div class="mrow"><div class="l">
+          <div class="t" title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
+          <div class="tiny mut">${esc(l.heure || "")} · ${esc(l.ligue)} · <span class="em">${esc(l.option)} · ${esc(l.fiche)}</span></div></div>
+          <div class="r"><div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:16px">${pct(1 - l.p)}</div>
+          <div class="tiny mut">non · oui ${pct(l.p)}</div></div></div>`).join("")}</div>`
+        : `<div class="card"><div class="hd"><span class="lbl em">Safe du jour — buts d'affilée</span>
+          <span class="lbl">0</span></div><div class="small mut">Aucun match des 5 grands championnats
+          n'atteint aujourd'hui les seuils mesurés (2+ match ≥ 75 % ou 2+ domicile ≥ 70 %).
+          Le robot s'abstient plutôt que de forcer.</div></div>`;
+      const gc = S.grosse_cote && S.grosse_cote.legs && S.grosse_cote.legs.length
+        ? `<div class="card"><div class="hd"><span class="lbl am">Combiné grosse cote — buts d'affilée</span>
+          <span class="pill am">cote juste ${f2(S.grosse_cote.cote_juste)}</span></div>
+          ${S.grosse_cote.legs.map((l) => `<div class="mrow"><div class="l">
+            <div class="t" title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
+            <div class="tiny mut">${esc(l.option)} · juste @ ${f2(l.cote_juste)}</div></div>
+            <div class="r"><span class="num am small">${pct(l.p)}</span></div></div>`).join("")}
+          <div class="tiny mut" style="margin-top:8px">Proba combinée ${pct(S.grosse_cote.p_combine)}
+            (indépendance supposée). Billet de loterie assumé : environ 1 chance sur
+            ${Math.round(S.grosse_cote.cote_juste)}.</div></div>`
+        : `<div class="card"><div class="hd"><span class="lbl am">Combiné grosse cote — buts d'affilée</span>
+          <span class="lbl">0</span></div><div class="small mut">Pas assez de jambes « 3 buts d'affilée »
+          ≥ 10 % aujourd'hui pour la cible de cote juste 20 à 50. Jamais forcé.</div></div>`;
+      z.innerHTML = `
+        <div class="warn"><b>Information chiffrée, jamais un conseil.</b> Probabilités de séries de
+          buts d'affilée (même équipe, sans but adverse entre-temps), biais mesurés puis corrigés sur
+          2 923 matchs réels (2 saisons, 5 grands championnats). <b>NON</b> = la série ne se produit
+          pas. Aucun bookmaker de nos sources ne propose ces marchés : rien dans le coupon ni le suivi.</div>
+        <div class="card"><div class="hd"><span class="lbl">Matchs du jour — ${esc(S.jour || "")}</span>
+          <span class="pill cy">${(S.matchs || []).length}</span></div>
+          ${(S.matchs || []).length ? `<div class="scrollx"><table class="tbl"><thead><tr>
+            <th>H</th><th>Match</th><th class="n">2·match</th><th class="n">3·match</th>
+            <th class="n">2·dom</th><th class="n">2·ext</th></tr></thead>
+            <tbody>${S.matchs.map(ligne).join("")}</tbody></table></div>
+            <div class="tiny mut" style="margin-top:6px">Chiffre gras = NON (la série n'arrive pas) ;
+            dessous = oui. Hors Big 5 ou coupes : affiché, jamais dans le safe ni le combiné.</div>`
+          : `<div class="small mut">Aucun match aujourd'hui dans le calendrier du robot.</div>`}
+        </div>
+        ${safe}${gc}`;
+    });
+  }
+
+  /* ---------------------------------------------------------- selections */
+  function pageSelections(D) {
+    const z = document.getElementById("z-contenu");
+    if (!z) return;
+    const auj = new Date().toISOString().slice(0, 10);
+    const duJour = D.sel.filter((s) => (s.jour || "") === auj);
+    const aVenir = D.sel.filter((s) => (s.jour || "") > auj && s.touche == null);
+    const combis = D.comb.filter((c) => (c.jour || "") >= hier());
+    z.innerHTML = `
+      <div class="card hi"><div class="hd"><span class="lbl">Sélections du jour</span>
+        <span class="pill ind">${duJour.length}</span></div>
+        ${duJour.length ? duJour.map(ligneSelection).join("")
+        : `<div class="small mut">Aucune sélection aujourd'hui : aucun match n'atteint le seuil
+           choisi. Le robot s'abstient — probabilité ≠ gain garanti.</div>`}
+      </div>
+      ${aVenir.length ? `<div class="card"><div class="hd"><span class="lbl">À venir</span>
+        <span class="pill mu">${aVenir.length}</span></div>
+        ${aVenir.slice(0, 8).map(ligneSelection).join("")}</div>` : ""}
+      <div class="sect"><span class="lbl">Combinés du robot</span><span class="line"></span></div>
+      ${combis.length ? combis.map(carteCombine).join("")
+        : `<div class="empty">Aucun combiné en cours.</div>`}
+      <div class="warn" style="margin-top:4px">Sélections issues du moteur calibré walk-forward.
+        Probabilités ≠ certitudes : aucune promesse de gain. Divisions instables exclues sous 85 %
+        (conseils) et 90 % (SAFE/combinés), coupes jamais dans les sélections suivies.</div>`;
+  }
+
+  /* ---------------------------------------------------------- corners */
+  function pageCorners(D) {
+    const z = document.getElementById("z-contenu");
+    if (!z) return;
+    const cp = D.comb.filter((c) => c.nom === "corners_montante")
+      .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""))[0];
+    if (!cp) {
+      z.innerHTML = `<div class="card"><div class="hd"><span class="lbl em">Coupon corners montante</span>
+        <span class="lbl">0</span></div>
+        <div class="small ink2">Aucun coupon ce jour : aucun match n'atteint 85 % de fréquence réelle
+        mesurée sur son meilleur handicap corners. Mieux vaut sauter un jour que forcer —
+        discipline algorithmique absolue.</div></div>
+        ${carteCalibCorners()}`;
+      return;
+    }
+    let mise = 1;
+    const jambes = (cp.jambes || []).map((l, i) => {
+      const c = l.cote || (l.p_cal ? 1 / l.p_cal : null);
+      const apres = c ? mise * c : null;
+      const html = `<div class="card">
+        <div class="hd"><span class="lbl ind">${String(i + 1).padStart(2, "0")} · ${esc(l.heure || "")}</span>
+          <span class="pill mu">${esc(String(l.ligue || "").slice(0, 14))}</span></div>
+        <div class="t" style="font-family:var(--f-disp);font-weight:700;font-size:16px"
+          title="${esc(l.home)} vs ${esc(l.away)}">${esc(l.home)} <span class="mut">vs</span> ${esc(l.away)}</div>
+        <div style="margin:6px 0"><span class="chip">${esc(l.option)}</span></div>
+        <div class="mrow"><div class="l tiny mut">annonce <s>${pct(l.p_brut)}</s> →
+          <span class="em">${pct(l.p_cal)}</span></div>
+          <div class="r tiny mut">cote juste <b class="ink2 num">${f2(c)}</b></div></div>
+        <div class="tiny mut">mise ${f2(mise)} u → <b class="ink2 num">${f2(apres)}</b> u</div>
+        <div class="bar"><i style="width:${Math.round((l.p_cal || 0) * 100)}%"></i></div></div>`;
+      if (c) mise = apres;
+      return html;
+    }).join("");
+    z.innerHTML = `
+      <div class="card foc"><div class="hd"><span class="lbl em">Coupon montante — ${esc(cp.jour || "")}</span>
+        <span class="pill em"><span class="dot"></span>active run</span></div>
+        <div class="kpis">
+          <div class="kpi"><div class="v num">${f2(cp.cote)}</div><div class="d">cote totale composée</div></div>
+          <div class="kpi"><div class="v num em">${pct(cp.p_combine)}</div><div class="d">proba combinée calibrée</div></div>
+        </div>
+        <div class="ok small" style="margin-top:10px">Tous les bons matchs du jour, dans l'ordre
+        chronologique des coups d'envoi — même jour uniquement, jamais de report ni d'enjambement
+        de session.</div></div>
+      ${jambes}
+      <div class="card hi"><div class="hd"><span class="lbl em">Objectif montante</span></div>
+        <div class="num em" style="font-family:var(--f-disp);font-weight:800;font-size:1.3rem">
+        Si tout passe : ${f2(mise)} u récupérées</div></div>
+      ${carteCalibCorners()}`;
+  }
+
+  function carteCalibCorners() {
+    return `<div class="card"><div class="hd"><span class="lbl">Calibration des modèles corners</span></div>
+      <div class="small ink2">Probabilités <b>calibrées</b> en walk-forward sur les données
+      football-data.co.uk : le modèle brut surestimait la domination corners (victoire annoncée
+      92 % → réalisée 79 %). Tous les pronostics corners intègrent cette décote de variance
+      structurelle. La 1re mi-temps n'entre jamais dans le safe (mesuré : 54 % de victoire sèche
+      en moyenne).</div>
+      <div class="tiny mut" style="margin-top:8px">Règle de sécurité : aucun coupon si aucun match
+      n'atteint 85 % de fréquence réelle mesurée aujourd'hui. Discipline algorithmique absolue.</div></div>`;
+  }
+
+  /* ---------------------------------------------------------- bilan */
   function pageBilan(D) {
+    const z = document.getElementById("z-contenu");
+    if (!z) return;
     const resolues = D.sel.filter((s) => s.touche != null);
     const touches = resolues.filter((s) => s.touche).length;
-    if (resolues.length) {
-      const t = Math.round(100 * touches / resolues.length) + " %";
-      if (!setTexte("b-hit", t)) majTexte("78 %", t, true);
-    }
-    if (!setTexte("b-hit-cap", `sélections touchées (${touches}/${resolues.length})`))
-      majTexte("sélections touchées (43/55)", `sélections touchées (${touches}/${resolues.length})`);
+    const taux = resolues.length ? Math.round(100 * touches / resolues.length) : null;
     let roi = 0, n = 0;
     for (const s of resolues) {
       if (s.cote_marche == null) continue;
       roi += s.touche ? s.cote_marche - 1 : -1; n++;
     }
-    const roiTxt = (roi >= 0 ? "+" : "") + roi.toFixed(1) + " u";
-    if (!setTexte("b-roi", roiTxt)) majTexte("+2.1 u", roiTxt, true);
-    majTexte("ROI simulé sur 30 jours", `ROI simulé sur ${n} sélections cotées`);
     const parMois = {};
     for (const s of resolues) {
       const m = (s.jour || "").slice(0, 7);
@@ -645,49 +675,48 @@
       parMois[m].n++; if (s.touche) parMois[m].t++;
     }
     const mois = Object.keys(parMois).sort().slice(-6);
-    const zMois = document.getElementById("z-mois");
-    if (zMois && mois.length) {
-      {
-        const z = zMois;
-        z.innerHTML = mois.map((m) => {
-          const r = parMois[m], taux = Math.round(100 * r.t / r.n);
-          const nom = new Date(m + "-15T12:00:00Z").toLocaleDateString("fr-FR", { month: "short" }).toUpperCase();
-          return `<div class="flex flex-col items-center justify-end gap-1 flex-1 h-full">
-            <span class="font-metric-xs text-metric-xs ${taux >= 75 ? "text-on-surface-variant" : "text-tertiary"}">${taux}%</span>
-            <div class="w-full rounded-t ${taux >= 75 ? "bg-primary" : "bg-tertiary"}" style="height:${Math.max(15, taux)}%"></div>
-            <span class="font-label-micro text-label-micro text-on-surface-variant">${nom}</span></div>`;
-        }).join("");
-      }
-    }
-    const parMarche = {};
-    for (const s of resolues) {
-      const k = s.option || "?";
-      (parMarche[k] = parMarche[k] || { t: 0, n: 0 });
-      parMarche[k].n++; if (s.touche) parMarche[k].t++;
-    }
-    const top = Object.entries(parMarche).filter(([, v]) => v.n >= 4)
-      .sort((a, b) => b[1].n - a[1].n).slice(0, 5);
-    const zM = zone("z-marches", "Under 2.5", /flex flex-col gap-1|flex-col/);
-    if (zM && top.length) {
-      zM.innerHTML = top.map(([k, v]) => {
-        const taux = Math.round(100 * v.t / v.n);
-        return `<div class="flex flex-col gap-1">
-          <div class="flex justify-between font-body-sm text-body-sm"><span>${esc(k)}</span>
-          <span class="font-metric-xs text-metric-xs ${taux >= 75 ? "text-secondary" : "text-tertiary"}">${taux} % (${v.n})</span></div>
-          <div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
-          <div class="h-full rounded-full ${taux >= 75 ? "bg-secondary" : taux >= 65 ? "bg-primary" : "bg-tertiary"}" style="width:${taux}%"></div></div></div>`;
-      }).join("");
-    }
+    const vol = (D.bilan && D.bilan.volume) || {};
+    z.innerHTML = `
+      <div class="card foc"><div class="hd"><span class="lbl">Transparence & bilan réel</span>
+        <span class="pill cy">données archivées</span></div>
+        <h1 style="font-size:1.3rem">Ce que le robot a vraiment touché</h1>
+        <div class="small ink2" style="margin:6px 0 12px">Chaque sélection est archivée puis résolue
+        sur les scores réels. Rien n'est effacé, rien n'est réécrit : les matchs manqués restent
+        affichés.</div>
+        <div class="kpis">
+          <div class="kpi"><div class="v num ${taux != null ? "em" : ""}">${taux != null ? taux + " %" : "—"}</div>
+            <div class="d">conseils touchés (${touches}/${resolues.length})</div></div>
+          <div class="kpi"><div class="v num ${roi >= 0 ? "em" : "rd"}">${(roi >= 0 ? "+" : "") + roi.toFixed(1)} u</div>
+            <div class="d">ROI sur ${n} sélections cotées</div></div>
+          <div class="kpi"><div class="v num">${vol.total_matchs ? vol.total_matchs.toLocaleString("fr-FR") : "—"}</div>
+            <div class="d">matchs réels en base</div></div>
+          <div class="kpi"><div class="v num">${D.comb.length}</div><div class="d">combinés archivés</div></div>
+        </div></div>
+      ${mois.length ? `<div class="card"><div class="hd"><span class="lbl">Historique mensuel</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;height:120px">
+        ${mois.map((m) => {
+          const r = parMois[m], t = Math.round(100 * r.t / r.n);
+          const nom = new Date(m + "-15T12:00:00Z").toLocaleDateString("fr-FR", { month: "short" });
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%">
+            <span class="tiny ${t >= 75 ? "ink2" : "cy"}">${t}%</span>
+            <div style="width:100%;border-radius:4px 4px 0 0;height:${Math.max(12, t)}%;background:${t >= 75 ? "var(--em)" : "var(--cy)"}"></div>
+            <span class="tiny mut">${nom}</span></div>`;
+        }).join("")}</div></div>` : ""}
+      <div class="card"><div class="hd"><span class="lbl">Dernières sélections résolues</span></div>
+        ${resolues.length ? `<div class="scrollx"><table class="tbl"><thead><tr>
+          <th>Jour</th><th>Match</th><th>Option</th><th class="n">Score</th><th class="n">Verdict</th></tr></thead>
+          <tbody>${resolues.slice(-14).reverse().map((s) => `<tr>
+            <td class="tiny">${esc((s.jour || "").slice(5))}</td>
+            <td class="tname" title="${esc(s.home)} vs ${esc(s.away)}">${esc(s.home)}–${esc(s.away)}</td>
+            <td class="tiny">${esc(s.option)}</td>
+            <td class="n tiny">${s.buts_home}-${s.buts_away}</td>
+            <td class="n"><b class="${s.touche ? "em" : "rd"}">${s.touche ? "✓" : "✗"}</b></td></tr>`).join("")}
+          </tbody></table></div>` : `<div class="small mut">Rien de résolu pour l'instant.</div>`}
+      </div>
+      <div class="warn">Bilan réel, pas simulé : mais un bon passé ne prédit pas l'avenir.
+        Les probabilités restent des probabilités — aucune promesse de gain.</div>`;
   }
 
-  /* ---------------------------------------------------------- auth */
-  /* Téléphone SANS OTP : le compte est un e-mail technique dérivé du numéro
-     (t<indicatif><numéro>@tel.pronos-foot.bj, ex. t2290197482946@...).
-     L'utilisateur ne voit que son numéro + son mot de passe.
-     Nécessite "Confirm email" OFF côté Supabase.
-     PAYS_AFRIQUE : [drapeau, nom, indicatif, min chiffres, max chiffres, préfixe?]
-     (chiffres du numéro national, sans l'indicatif pays ; préfixe = motif
-     RegExp optionnel que le numéro national doit respecter). */
   const PAYS_AFRIQUE = [
     ["🇧🇯", "Bénin", "229", 10, 10, "^01"],
     ["🇩🇿", "Algérie", "213", 9, 9],
@@ -746,6 +775,7 @@
     ["🇿🇼", "Zimbabwe", "263", 7, 9],
   ];
   let paysSel = PAYS_AFRIQUE[0];
+
   function paysParCc(dd) {
     for (const L of [3, 2, 1]) {
       const p = PAYS_AFRIQUE.find((x) => x[2] === dd.slice(0, L));
@@ -1078,9 +1108,8 @@
     if (!menu) {
       menu = document.createElement("div");
       menu.id = "v-menu";
-      menu.className = "fixed z-[60] right-3 top-[68px] w-64 rounded-xl bg-surface-container-high " +
-        "border border-outline-variant shadow-2xl p-2 flex-col gap-1";
-      menu.style.display = "none";
+      menu.className = "card hi";
+      menu.style.cssText = "display:none;position:fixed;z-index:60;right:12px;top:66px;width:250px;flex-direction:column;gap:4px";
       document.body.appendChild(menu);
       document.addEventListener("click", (e) => {
         if (menu.style.display !== "none" && !menu.contains(e.target) && !btn.contains(e.target))
@@ -1122,17 +1151,17 @@
         abo = (r.data || [])[0] || null;
       } catch (e) {}
       menu.innerHTML = `
-        <div class="px-2 py-1.5">
-          <div class="font-label-micro text-label-micro uppercase tracking-widest text-outline">Mon compte</div>
-          <div class="font-body-sm text-body-sm text-on-surface break-all">${esc(afficheId(u.email))}</div>
+        <div style="padding:4px 2px">
+          <div class="lbl">Mon compte</div>
+          <div class="small" style="word-break:break-all">${esc(afficheId(u.email))}</div>
         </div>
-        <div class="px-2 py-1.5">
-          <div class="font-label-micro text-label-micro uppercase tracking-widest text-outline">Mon abonnement</div>
-          <div class="font-body-sm text-body-sm ${abo ? "text-secondary" : "text-error"}">${
+        <div style="padding:4px 2px">
+          <div class="lbl">Mon abonnement</div>
+          <div class="small ${abo ? "em" : "rd"}">${
             abo ? "Actif jusqu'au " + esc(dateFin(abo.fin)) : "Inactif"}</div>
         </div>
-        ${abo ? "" : `<a href="activation.html" class="mx-1 text-center bg-secondary text-on-secondary py-2 rounded-lg font-headline-sm text-headline-sm">Activer via WhatsApp</a>`}
-        <button id="v-out" class="mx-1 text-center bg-surface-container-low text-error py-2 rounded-lg font-headline-sm text-headline-sm">Se déconnecter</button>`;
+        ${abo ? "" : `<a href="activation.html" class="btn em" style="padding:9px">Activer via WhatsApp</a>`}
+        <button id="v-out" class="btn ghost rd" style="padding:9px">Se déconnecter</button>`;
       const out = menu.querySelector("#v-out");
       if (out) out.onclick = async () => { await SB.auth.signOut(); location.reload(); };
       btn.onclick = (e) => {
@@ -1150,13 +1179,14 @@
 
   /* ---------------------------------------------------------- démarrage */
   (async function () {
+    coquille();
     if (PAGE === "paiement") {
       const b = document.createElement("div");
-      b.className = "mx-gutter-base mt-gutter-base rounded-xl p-gutter-base bg-surface-container-high " +
-        "border border-outline-variant text-on-surface-variant font-body-sm text-body-sm";
-      b.innerHTML = "<b>PHASE 4 — PAIEMENTS NON ACTIFS.</b> Écran de prévisualisation design uniquement : " +
-        "aucun encaissement avant validation du cadre légal béninois (LNB). Rien ne peut être débité ici.";
-      document.querySelector("main").prepend(b);
+      b.className = "warn";
+      b.innerHTML = "<b>PHASE 4 — PAIEMENTS NON ACTIFS.</b> Écran de prévisualisation design " +
+        "uniquement : aucun encaissement avant validation du cadre légal. Rien ne peut être débité ici.";
+      const m = document.querySelector("main");
+      if (m) m.prepend(b);
       document.querySelectorAll("button, a").forEach((x) => {
         if (/payer/i.test(x.textContent || "")) { x.disabled = true; x.style.opacity = ".4"; }
       });
@@ -1164,7 +1194,7 @@
     }
     const besoinAuth = ["connexion", "inscription"].includes(PAGE);
     const besoinData = ["accueil", "selections", "corners", "bilan"].includes(PAGE);
-    if ((besoinAuth || besoinData) && CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY !== "A_COLLER") {
+    if (CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY !== "A_COLLER") {
       SB = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
     }
     if (besoinAuth) {
@@ -1172,6 +1202,7 @@
       else pageAuth(PAGE);
     }
     if (besoinAuth || besoinData) await sessionPret();
+    if (PAGE === "series") { pageSeries(); etatSession(); return; }
     if (besoinData) {
       const D = await charge();
       window.__ACC = await accesOk();
@@ -1185,8 +1216,6 @@
         if (PAGE === "selections") (window.__ACC.ok ? pageSelections(D) : verrou("selections"));
         if (PAGE === "corners") (window.__ACC.ok ? pageCorners(D) : verrou("corners"));
         if (PAGE === "bilan") pageBilan(D);
-        /* scores en direct : 1er passage 4 s après l'affichage, puis toutes
-           les 30 min + à chaque retour sur l'onglet ( ESPN, coût 0 quota) */
         setTimeout(demarrerLive, 4000);
       } else if (!window.__ACC.ok && (PAGE === "selections" || PAGE === "corners")) {
         verrou(PAGE);
