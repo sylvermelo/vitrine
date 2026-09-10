@@ -17,6 +17,7 @@
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const pct = (x) => x == null ? "—" : Math.round(x * 100) + " %";
   const f2 = (x) => x == null ? "—" : Number(x).toFixed(2);
+  const nf = (n) => Number(n || 0).toLocaleString("fr-FR");
   const aujourdHui = () => new Date(Date.now() + 3600000).toISOString().slice(0, 10);
 
   function feuilleParTexte(texte, exact) {
@@ -177,6 +178,7 @@
         <div class="min-w-0">
           <div class="font-headline-md text-headline-md text-on-surface truncate">${esc(s.home)} vs ${esc(s.away)}</div>
           <div class="font-body-xs text-body-xs text-on-surface-variant">${verdict || (s.confiance ? "confiance " + esc(s.confiance) : "&nbsp;")}</div>
+          ${s.touche == null ? `<span class="live-score font-metric-xs text-metric-xs text-primary" style="display:${badgeLive(s.div, s.home, s.away) ? "block" : "none"}" data-div="${esc(s.div || "")}" data-jour="${esc(s.jour || "")}" data-home="${esc(s.home || "")}" data-away="${esc(s.away || "")}">${esc(badgeLive(s.div, s.home, s.away))}</span>` : ""}
         </div>
         <div class="text-right shrink-0">
           <div class="font-metric-md text-metric-md text-secondary">${pct(s.p)}</div>
@@ -256,6 +258,144 @@
         await new Promise((r) => setTimeout(r, 900 * essai));
       }
     }
+  }
+
+  /* ------------------------------------------- prix & promo (dynamique 10/09)
+     Aucun prix codé en dur : tout vient de la table Supabase `parametres`
+     (lecture publique). Si la table n'existe pas encore, valeurs par défaut
+     du barème validé — rien ne casse, aucun message d'erreur. */
+  const PARAM_DEFAUT = {
+    prix: { mensuel_fcfa: 2500, duree_jours: 30, devise: "FCFA" },
+    promo: { actif: false, prix_fcfa: null, jusquau: null },
+    affiliation: { reduction_fcfa: 500, commission_premiere: 1000, commission_renouvellement: 500, seuil_paiement_fcfa: 2500 },
+  };
+  async function chargeParametres() {
+    const P = JSON.parse(JSON.stringify(PARAM_DEFAUT));
+    try {
+      SB = SB || window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+      const r = await SB.from("parametres").select("cle,valeur");
+      if (!r.error && r.data) for (const row of r.data) {
+        if (P[row.cle]) Object.assign(P[row.cle], row.valeur || {});
+      }
+    } catch (e) { /* silencieux : valeurs par défaut */ }
+    P.promoActive = !!(P.promo.actif && P.promo.prix_fcfa && P.promo.jusquau &&
+      String(P.promo.jusquau).slice(0, 10) >= aujourdHui());
+    return P;
+  }
+  async function appliquerPrixPaiement() {
+    const main = document.querySelector("main");
+    if (!main) return;
+    const P = await chargeParametres();
+    const prixNormal = Number(P.prix.mensuel_fcfa) || 2500;
+    const prixFinal = P.promoActive ? Number(P.promo.prix_fcfa) : prixNormal;
+    /* Remplace le prix écrit en dur dans la maquette (« 5 000 FCFA ») par le
+       prix réel, partout où il apparaît dans la page. */
+    const walk = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+    const cibles = [];
+    let nd;
+    while ((nd = walk.nextNode())) if (/\b5\s*000\s*FCFA\b/.test(nd.nodeValue)) cibles.push(nd);
+    for (const t of cibles) t.nodeValue = t.nodeValue.replace(/\b5\s*000(\s*FCFA)\b/g, nf(prixFinal) + "$1");
+    if (P.promoActive) {
+      const b = document.createElement("div");
+      b.className = "mx-gutter-base mt-gutter-base rounded-xl p-gutter-base " +
+        "bg-secondary-container/25 border border-secondary/50 text-on-surface font-body-sm text-body-sm";
+      b.innerHTML = "🔥 <b>PROMOTION : " + nf(prixFinal) + " FCFA</b> / 30 jours " +
+        "<s style='opacity:.55'>" + nf(prixNormal) + " FCFA</s> — jusqu'au <b>" +
+        esc(dateFr(String(P.promo.jusquau).slice(0, 10))) + "</b> inclus.";
+      main.prepend(b);
+    }
+  }
+
+  /* ------------------------------------------------ scores en direct (10/09)
+     Demande : « rafraîchissement des scores/résultats toutes les 30 min si le
+     quota le permet ». Réponse : ce rafraîchissement se fait dans le
+     NAVIGATEUR du visiteur, en appelant ESPN directement (API publique sans
+     clé, CORS ouvert — vérifié le 10/09). Coût : 0 minute GitHub Actions,
+     0 crédit The Odds API. Affichage uniquement : la validation officielle
+     (touche/manquée, coupons) reste le travail du robot, chaque heure. */
+  const ESPN_SLUGS = {
+    E0: "eng.1", E1: "eng.2", E2: "eng.3", E3: "eng.4",
+    SC0: "sco.1", SC1: "sco.2", SC2: "sco.3", SC3: "sco.4",
+    B1: "bel.1", N1: "ned.1", D1: "ger.1", D2: "ger.2",
+    F1: "fra.1", F2: "fra.2", I1: "ita.1", I2: "ita.2",
+    SP1: "esp.1", SP2: "esp.2", P1: "por.1", T1: "tur.1", G1: "gre.1",
+    UCL: "uefa.champions", UEL: "uefa.europa", UECL: "uefa.europa.conf",
+    CAR: "eng.league_cup", CDR: "esp.copa_del_rey", CDI: "ita.coppa_italia",
+    DFP: "ger.dfb_pokal", CDF: "fra.coupe_de_france",
+  };
+  const SUFFIXES_EQ = ["town", "city", "united", "wanderers", "rovers", "athletic",
+    "county", "north end", "albion", "fc", "afc", "cf", "sk", "bk", "sc", "sv",
+    "vfl", "vfb", "ac", "as", "ss", "rc", "sl", "kv", "ksc", "bsc", "fk", "ik",
+    "if", "amsterdam", "foot"];
+  function normEq(s) {
+    let x = String(s || "").toLowerCase().normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+    for (const sfx of SUFFIXES_EQ) {
+      if (x.endsWith(" " + sfx)) {
+        const c = x.slice(0, x.length - sfx.length - 1).trim();
+        if (c.length >= 3) x = c;
+      }
+    }
+    return x;
+  }
+  const memeEquipe = (a, b) => {
+    const x = normEq(a), y = normEq(b);
+    return !!x && !!y && (x === y || x.includes(y) || y.includes(x));
+  };
+  let LIVE_CACHE = [];
+  let LIVE_TIMER = null;
+  function badgeLive(div, home, away) {
+    const d = String(div || "").toUpperCase();
+    const m = LIVE_CACHE.find((x) => x.div === d && memeEquipe(x.h, home) && memeEquipe(x.a, away));
+    if (!m) return "";
+    if (m.state === "in" && m.bh != null) return "⚽ direct " + m.bh + "-" + m.ba + " · " + m.short;
+    if (m.state === "post" && m.bh != null) return "⚽ terminé " + m.bh + "-" + m.ba + " (validation en attente)";
+    if (m.state === "pre") return "coup d'envoi " + m.short;
+    return "";
+  }
+  async function majScoresLive() {
+    const badges = [...document.querySelectorAll(".live-score")];
+    if (!badges.length) return;
+    const auj = aujourdHui();
+    const cibles = badges.filter((b) => b.dataset.jour === auj && ESPN_SLUGS[String(b.dataset.div || "").toUpperCase()]);
+    if (!cibles.length) return;
+    const divs = [...new Set(cibles.map((b) => String(b.dataset.div).toUpperCase()))];
+    const ymd = auj.replace(/-/g, "");
+    const parDiv = await Promise.all(divs.map(async (d) => {
+      try {
+        const r = await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/" +
+          ESPN_SLUGS[d] + "/scoreboard?dates=" + ymd);
+        if (!r.ok) return [];
+        const j = await r.json();
+        return (j.events || []).map((e) => {
+          const comp = (e.competitions || [{}])[0];
+          let h = null, a = null, bh = null, ba = null;
+          for (const co of comp.competitors || []) {
+            const nom = (co.team || {}).displayName;
+            const buts = parseInt(co.score, 10);
+            if (co.homeAway === "home") { h = nom; bh = isNaN(buts) ? null : buts; }
+            else if (co.homeAway === "away") { a = nom; ba = isNaN(buts) ? null : buts; }
+          }
+          const st = ((e.status || {}).type) || {};
+          return {
+            div: d, h, a, bh, ba, state: st.state || "",
+            short: st.shortDetail || (e.status || {}).displayValue || "",
+          };
+        }).filter((m) => m.h && m.a);
+      } catch (e) { return []; }
+    }));
+    LIVE_CACHE = parDiv.flat();
+    for (const b of cibles) {
+      const txt = badgeLive(b.dataset.div, b.dataset.home, b.dataset.away);
+      b.textContent = txt;
+      b.style.display = txt ? "block" : "none";
+    }
+  }
+  function demarrerLive() {
+    majScoresLive();
+    if (LIVE_TIMER) clearInterval(LIVE_TIMER);
+    LIVE_TIMER = setInterval(majScoresLive, 30 * 60 * 1000);   /* toutes les 30 min */
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) majScoresLive(); });
   }
 
   /* ---------------------------------------------------------- pages */
@@ -804,6 +944,17 @@
         pIn.style.display = pOk.checked ? "block" : "none";
         if (pOk.checked) pIn.focus();
       };
+      /* Lien d'affilié : ?p=PF-XXXXX (ou ?code=PF-XXXXX) pré-remplit le code
+         promo — l'espace affilié génère des liens de ce format. */
+      try {
+        const prm = new URLSearchParams(location.search);
+        const cpUrl = (prm.get("p") || prm.get("code") || "").trim().toUpperCase();
+        if (/^PF-[A-Z0-9]{5}$/.test(cpUrl)) {
+          pOk.checked = true;
+          pIn.style.display = "block";
+          pIn.value = cpUrl;
+        }
+      } catch (e) { /* navigateur trop ancien : le champ manuel reste là */ }
     }
     const codePromo = () => {
       if (!promoWrap || !promoWrap.querySelector("#v-promo-ok").checked) return "";
@@ -1009,6 +1160,7 @@
       document.querySelectorAll("button, a").forEach((x) => {
         if (/payer/i.test(x.textContent || "")) { x.disabled = true; x.style.opacity = ".4"; }
       });
+      appliquerPrixPaiement();   /* prix/promo dynamiques (table parametres) */
     }
     const besoinAuth = ["connexion", "inscription"].includes(PAGE);
     const besoinData = ["accueil", "selections", "corners", "bilan"].includes(PAGE);
@@ -1033,6 +1185,9 @@
         if (PAGE === "selections") (window.__ACC.ok ? pageSelections(D) : verrou("selections"));
         if (PAGE === "corners") (window.__ACC.ok ? pageCorners(D) : verrou("corners"));
         if (PAGE === "bilan") pageBilan(D);
+        /* scores en direct : 1er passage 4 s après l'affichage, puis toutes
+           les 30 min + à chaque retour sur l'onglet ( ESPN, coût 0 quota) */
+        setTimeout(demarrerLive, 4000);
       } else if (!window.__ACC.ok && (PAGE === "selections" || PAGE === "corners")) {
         verrou(PAGE);
       }
