@@ -196,10 +196,16 @@
       : `<span class="pill mu">en attente</span>`;
     const origine = (c.brut && c.brut.origine)
       ? `<div class="err small" style="margin:8px 0 0">${esc(c.brut.origine)}</div>` : "";
+    let coteAff = c.cote;
+    if (coteAff == null) {           /* repli : produit des cotes justes des jambes */
+      let prod = 1, ok = jambes.length > 0;
+      for (const l of jambes) { if (l.p) prod *= 1 / l.p; else ok = false; }
+      if (ok) coteAff = Math.round(prod * 100) / 100;
+    }
     return `<div class="card">
       <div class="hd"><span class="lbl ind">${esc(titre || nomBeau(c.nom))}</span>${etat}</div>
       <div class="kpis" style="grid-template-columns:1fr 1fr">
-        <div class="kpi"><div class="v num">${f2(c.cote)}</div><div class="d">cote totale (calcul)</div></div>
+        <div class="kpi"><div class="v num">${f2(coteAff)}</div><div class="d">cote totale (calcul)</div></div>
         <div class="kpi"><div class="v num cy">${pct(c.p_combine)}</div><div class="d">proba combin\u00e9e</div></div>
       </div>
       <div class="cases">${jambes.slice(0, 10).map(caseLeg).join("")}</div>
@@ -590,10 +596,17 @@
     brancheBilanExotique();
   }
 
-  /* Correctif nuit du 11/09 : un combin\u00e9 R\u00c9SOLU d'un jour pass\u00e9 ne doit
-     JAMAIS s'afficher comme \u00ab du jour \u00bb (bug vu \u00e0 1 h du matin : cote 5
-     d'hier \u00ab valid\u00e9e \u00bb \u00e0 la place du combin\u00e9 du jour). R\u00e8gle : celui du
-     jour ; \u00e0 d\u00e9faut, celui d'hier UNIQUEMENT s'il est encore en cours. */
+  /* ---------------------------------------------------------- selections */
+  /* SOURCE DES COMBIN\u00c9S (r\u00e8gle utilisateur 11/09) : la vitrine prend les
+     informations CHEZ pronos-foot \u2014 combines_jour.json publi\u00e9 par le robot
+     chaque heure (m\u00eames combin\u00e9s que le site du robot), repli Supabase
+     (\u00e9crite par le robot aussi) si le JSON n'est pas encore l\u00e0. Jamais de
+     combin\u00e9 recr\u00e9\u00e9 c\u00f4t\u00e9 vitrine. Un combin\u00e9 R\u00c9SOLU d'un jour pass\u00e9 ne
+     s'affiche jamais comme \u00ab du jour \u00bb. */
+  function normaliseComb(c, nom) {
+    return { nom, jour: c.jour || aujourdHui(), cote: c.cote, p_combine: c.p_combine,
+             touche: c.touche, jambes: c.legs || c.jambes || [], brut: c.brut || {} };
+  }
   function combiPertinent(D, nom) {
     const rows = D.comb.filter((c) => (c.nom || "") === nom)
       .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""));
@@ -604,41 +617,60 @@
       return { c, titre: nomBeau(nom).replace(" DU JOUR", " D'HIER") + " \u2014 en cours" };
     return null;
   }
-  function carteSafeWeekend(D) {
-    const sw = dernierComb(D, "safe_weekend");
-    if (!sw) return "";
+  function carteSafeWeekend(D, J) {
     const dow = new Date().getDay();          /* 0=dim 5=ven 6=sam */
     const weekEnd = (dow === 5 || dow === 6 || dow === 0);
-    if (weekEnd) return carteCombine(sw, "SAFE DU WEEK-END \u2014 \u00e0 venir");
-    /* Lundi \u2192 jeudi : r\u00e9sultat du week-end pass\u00e9, d\u00e9taill\u00e9, jusqu'au jeudi. */
-    const jambes = sw.jambes || [];
-    const resolues = jambes.filter((l) => l.resultat && l.resultat.touche != null);
+    if (weekEnd) {
+      const jd = J && J.du_jour && J.du_jour.safe_weekend;
+      const sw = jd ? normaliseComb(jd, "safe_weekend") : dernierComb(D, "safe_weekend");
+      return sw ? carteCombine(sw, "SAFE DU WEEK-END \u2014 \u00e0 venir") : "";
+    }
+    /* Lundi \u2192 jeudi : r\u00e9sultat du week-end pass\u00e9 (suivi r\u00e9solu), jusqu'au jeudi. */
+    const sw = dernierComb(D, "safe_weekend");
+    if (!sw) return "";
+    const resolues = (sw.jambes || []).filter((l) => l.resultat && l.resultat.touche != null);
     if (!resolues.length) return "";
     return carteCombine(sw, "R\u00c9SULTAT SAFE WEEK-END \u2014 week-end pass\u00e9");
+  }
+  const CIBLES = { cote2: "entre 1,90 et 2,35", cote5: "entre 4,60 et 5,90" };
+  function carteCombinable(D, J, nom, lb) {
+    const jd = J && J.du_jour && J.du_jour[nom];
+    let c = jd ? normaliseComb(jd, nom) : null;
+    let titre = lb;
+    if (!c) {
+      const p = combiPertinent(D, nom);
+      if (p) { c = p.c; titre = p.titre || lb; }
+    }
+    if (c) return carteCombine(c, titre);
+    return `<div class="card"><div class="hd"><span class="lbl ind">${esc(lb)}</span></div>
+      <div class="small mut">Pas (encore) de ${esc(lb.toLowerCase())} : le robot vise une cote
+      juste ${CIBLES[nom]} avec les matchs du jour \u2014 s'il ne l'atteint pas, il s'abstient
+      plut\u00f4t que de forcer. Archivage toutes les heures.</div></div>`;
+  }
+  function renduCombine(D, J) {
+    return `<div class="tabs" id="subtabs" style="margin-top:2px">
+        <button type="button" class="tab on" data-sub="cote2">Cote 2 du jour</button>
+        <button type="button" class="tab" data-sub="cote5">Cote 5 du jour</button></div>
+      <div id="sub-contenu">${carteCombinable(D, J, "cote2", "COTE 2 DU JOUR")}</div>`;
+  }
+  function bindSubCombine(z, D, J) {
+    const st = z.querySelector("#subtabs");
+    if (!st || !st.querySelectorAll) return;
+    st.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+      st.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+      const sc = z.querySelector("#sub-contenu");
+      if (sc) sc.innerHTML = carteCombinable(D, J, b.dataset.sub,
+        b.dataset.sub === "cote2" ? "COTE 2 DU JOUR" : "COTE 5 DU JOUR");
+    }));
   }
   function pageSelections(D) {
     const z = document.getElementById("z-contenu");
     if (!z) return;
     const auj = aujourdHui();
-    const duJour = D.sel.filter((s) => (s.jour || "") === auj);
-    const aVenir = D.sel.filter((s) => (s.jour || "") > auj && s.touche == null);
-    function contenu(onglet) {
-      if (onglet === "safe") {
-        const p = combiPertinent(D, "safe");
-        const safeHtml = p ? carteCombine(p.c, p.titre || "SAFE DU JOUR")
-          : `<div class="card"><div class="hd"><span class="lbl ind">SAFE du jour</span></div>
-             <div class="small mut">Pas (encore) de SAFE aujourd'hui : le robot archive chaque
-             heure \u2014 s'il s'abstient, c'est qu'aucune combinaison n'atteint les seuils
-             mesur\u00e9s. Ce n'est pas un bug.</div></div>`;
-        return safeHtml + carteSafeWeekend(D);
-      }
-      if (onglet === "combine") {
-        const c2 = combiPertinent(D, "cote2"), c5 = combiPertinent(D, "cote5");
-        if (!c2 && !c5) return `<div class="empty">Pas (encore) de combin\u00e9 aujourd'hui :
-          le robot archive chaque heure \u2014 s'il s'abstient, c'est qu'aucun seuil mesur\u00e9
-          n'est atteint.</div>`;
-        return `${c2 ? carteCombine(c2.c, c2.titre) : ""}${c5 ? carteCombine(c5.c, c5.titre) : ""}`;
-      }
+    let J = null, actif = "jour";
+    function renduJour() {
+      const duJour = D.sel.filter((s) => (s.jour || "") === auj);
+      const aVenir = D.sel.filter((s) => (s.jour || "") > auj && s.touche == null);
       return `
         <div class="card hi"><div class="hd"><span class="lbl">S\u00e9lections du jour</span>
           <span class="pill ind">${duJour.length}</span></div>
@@ -650,13 +682,48 @@
           <span class="pill mu">${aVenir.length}</span></div>
           ${aVenir.slice(0, 8).map(ligneSelection).join("")}</div>` : ""}`;
     }
+    function renduSafe() {
+      const jd = J && J.du_jour && J.du_jour.safe;
+      let safe = jd ? normaliseComb(jd, "safe") : null;
+      let titre = "SAFE DU JOUR";
+      if (!safe) {
+        const p = combiPertinent(D, "safe");
+        if (p) { safe = p.c; titre = p.titre || "SAFE DU JOUR"; }
+      }
+      const safeHtml = safe ? carteCombine(safe, titre)
+        : `<div class="card"><div class="hd"><span class="lbl ind">SAFE du jour</span></div>
+           <div class="small mut">Pas (encore) de SAFE aujourd'hui : le robot archive chaque
+           heure \u2014 s'il s'abstient, c'est qu'aucune combinaison n'atteint les seuils
+           mesur\u00e9s. Ce n'est pas un bug.</div></div>`;
+      return safeHtml + carteSafeWeekend(D, J);
+    }
+    function contenu(onglet) {
+      if (onglet === "safe") return renduSafe();
+      if (onglet === "combine") return renduCombine(D, J);
+      return renduJour();
+    }
+    function rafraichis() {
+      const c = z.querySelector("#tab-contenu");
+      if (c) c.innerHTML = contenu(actif);
+      if (actif === "combine") bindSubCombine(z, D, J);
+    }
     z.innerHTML = tabsHtml("jour", [["jour", "S\u00e9lection du jour"], ["safe", "SAFE"], ["combine", "Combin\u00e9"]])
       + `<div id="tab-contenu">${contenu("jour")}</div>
-      <div class="warn">S\u00e9lections issues du moteur math\u00e9matique calibr\u00e9 en walk-forward.
-        Cotes affich\u00e9es = calcul du robot (cote juste), jamais celles d'un bookmaker.
-        Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions instables exclues sous 85 %
-        (conseils) et 90 % (SAFE/combin\u00e9s), coupes jamais dans les s\u00e9lections suivies.</div>`;
-    bindTabs(z, contenu);
+      <div class="warn">Combin\u00e9s publi\u00e9s par le robot (m\u00eame source que le site pronos-foot,
+        mis \u00e0 jour chaque heure). Cotes affich\u00e9es = calcul du robot (cote juste), jamais celles
+        d'un bookmaker. Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions
+        instables exclues sous 85 % (conseils) et 90 % (SAFE/combin\u00e9s), coupes jamais dans les
+        s\u00e9lections suivies.</div>`;
+    z.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+      actif = b.dataset.tab;
+      z.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+      rafraichis();
+    }));
+    chargeJson("../pronos-foot/combines_jour.json").then((j) => {
+      if (!j) return;
+      J = j;
+      rafraichis();          /* l'onglet ouvert repasse sur la source robot */
+    });
   }
 
   /* ---------------------------------------------------- choix exotiques */
@@ -692,10 +759,13 @@
         <span class="team" title="${esc(m.away)}">${esc(m.away)}</span></div>
       ${score}
       <div class="case-p"><span class="chip">${esc(non.option || "")}</span>
-        ${p != null ? `<span class="pct-badge ${couleurP(p)}">${pct(p)}</span>` : ""}</div>
+        ${p != null ? `<span class="pct-badge ${couleurP(p)}">${pct(p)}</span>` : ""}
+        ${coteJusteExo(non, p) ? `<span class="tiny mut">cote juste <b class="ink2 num">${f2(coteJusteExo(non, p))}</b></span>` : ""}</div>
     </div>`;
   }
 
+  const coteJusteExo = (non, p) => non && non.cote_juste != null ? non.cote_juste
+    : (p ? Math.round((1 / p) * 100) / 100 : null);
   const jourExo = (vue, jour) => ((vue && vue.jours) || {})[jour] || { matchs: [] };
 
   function histoExo(vue, type) {
