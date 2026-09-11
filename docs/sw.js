@@ -1,9 +1,9 @@
 /* Service worker vitrine : coquille en cache (hors-ligne), pages ET scripts
    en network-first (jamais de vieille version servie quand le réseau existe).
    addAll tolérant : un fichier manquant n'empêche plus l'installation. */
-const CACHE = "vitrine-v7-11-09";
+const CACHE = "vitrine-v8-11-09";
 const COQUILLE = [
-  "./", "./index.html", "./selections.html", "./exotiques.html", "./corners.html", "./series.html", "./bilan.html",
+  "./", "./index.html", "./selections.html", "./exotiques.html", "./abonnement.html", "./corners.html", "./series.html", "./bilan.html",
   "./acces.html", "./connexion.html", "./inscription.html", "./paiement.html",
   "./confidentialite.html", "./conditions.html", "./activation.html",
   "./assets/app.js", "./assets/config.js", "./assets/manifest.webmanifest",

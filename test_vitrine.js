@@ -15,7 +15,7 @@ const hier = new Date(Date.now() + 3600000 - 86400000).toISOString().slice(0, 10
 const hier2 = new Date(Date.now() + 3600000 - 2 * 86400000).toISOString().slice(0, 10);
 
 const jambe = (home, away, option, p, resolu) => ({
-  div: "E0", ligue: "Premier League", heure: "20:00", home, away, option, p,
+  div: "E0", ligue: "Premier League", date: auj, heure: "20:00", home, away, option, p,
   cote_juste: Math.round((1 / p) * 100) / 100,
   resultat: resolu == null ? null : { touche: resolu, buts_home: 2, buts_away: 1, resolu_le: hier },
 });
@@ -29,7 +29,7 @@ const COMB_ROWS = [
   { jour: hier, nom: "safe", p_combine: 0.81, cote: 1.23, touche: true, jambes: [jambe("Bayern Munich", "Kiel", "over 1.5", 0.9, true)], brut: {} },
   { jour: hier, nom: "safe_weekend", p_combine: 0.7, cote: 1.42, touche: false, jambes: [jambe("Paris SG", "Nantes", "over 1.5", 0.88, true), jambe("Inter", "Pisa", "double chance 1X", 0.9, false)], brut: {} },
   { jour: auj, nom: "cote2", p_combine: 0.48, cote: 2.08, touche: null, jambes: [jambe("Arsenal", "Chelsea", "over 1.5", 0.83, null), jambe("Liverpool", "Everton", "over 1.5", 0.9, null)], brut: {} },
-  { jour: auj, nom: "cote5", p_combine: 0.2, cote: 5.0, touche: null, jambes: [jambe("Real Madrid", "Osasuna", "les deux marquent", 0.55, null), jambe("Bayern Munich", "Kiel", "over 2.5", 0.66, null)], brut: {} },
+  { jour: hier, nom: "cote5", p_combine: 0.2, cote: 5.0, touche: true, jambes: [jambe("Real Madrid", "Osasuna", "les deux marquent", 0.55, true)], brut: {} },
   { jour: hier, nom: "cote2", p_combine: 0.5, cote: 2.0, touche: true, jambes: [jambe("Bayern Munich", "Kiel", "over 1.5", 0.9, true)], brut: {} },
 ];
 
@@ -124,14 +124,19 @@ async function run(page) {
   }
   const tabEl = REG["#tab-contenu"];
   const z = REG["z-contenu"], hdr = REG["hdr"], bnav = REG["bnav"];
+  const zbx = REG["z-bilan-exotique"];
   return { page, errs, html: z ? z._html : "", tab: tabEl ? tabEl._html : "", snaps,
-           hdr: hdr ? hdr._html : "", bnav: bnav ? bnav._html : "" };
+           zbx: zbx ? zbx._html : "", hdr: hdr ? hdr._html : "", bnav: bnav ? bnav._html : "" };
 }
 (async () => {
   let ko = 0;
   const checks = {
     accueil: (r) => [
       ["volet mois", r.html.includes("Ce mois-ci")],
+      ["PLUS de « à zéro le 1er »", !r.html.includes("à zéro le 1er")],
+      ["hier : conseil = 1/1 · 100 %", r.html.includes("1/1 · 100 %")],
+      ["hier : mot « manqué » absent", !r.html.includes("manqué")],
+      ["bilan exotique (async)", r.zbx.includes("Bilan exotique") && r.zbx.includes("corners touchés")],
       ["4 compteurs", r.html.includes("conseils touchés") && r.html.includes("SAFE touchés") && r.html.includes("cote 2 touchés") && r.html.includes("cote 5 touchés")],
       ["hier SANS détail de matchs", r.html.includes("Hier —") && !r.html.includes("Sevilla")],
       ["aujourd'hui gardé", r.html.includes("Aujourd'hui") && r.html.includes("Arsenal")],
@@ -147,7 +152,8 @@ async function run(page) {
       ["onglet SAFE : safe du jour", (r.snaps.safe || "").includes("SAFE DU JOUR") && (r.snaps.safe || "").includes("Liverpool")],
       ["onglet SAFE : cotes justes", (r.snaps.safe || "").includes("cote juste")],
       ["onglet SAFE : week-end", (r.snaps.safe || "").includes("WEEK-END")],
-      ["onglet Combiné : cote 2 + cote 5", (r.snaps.combine || "").includes("COTE 2 DU JOUR") && (r.snaps.combine || "").includes("COTE 5 DU JOUR")],
+      ["onglet Combiné : cote 2 du jour", (r.snaps.combine || "").includes("COTE 2 DU JOUR")],
+      ["onglet Combiné : PAS la cote 5 résolue d'hier", !(r.snaps.combine || "").includes("COTE 5") && !(r.snaps.combine || "").includes("validé")],
       ["onglet Combiné : score sous le match", (r.snaps.combine || "").includes("case-score") || !(r.snaps.combine || "").includes("touché")],
       ["avertissement en bas", r.html.includes("warn")],
     ],
@@ -167,12 +173,19 @@ async function run(page) {
       ["graphe mensuel", r.html.includes("Historique mensuel")],
       ["7 derniers jours", r.html.includes("7 derniers jours")],
       ["PLUS de dernière sélection résolue", !r.html.includes("Dernière sélection résolue")],
+      ["bilan exotique par saison", r.zbx.includes("Bilan exotique") && r.zbx.includes("buts d'affilée touchés")],
       ["avertissement en bas", r.html.includes("warn")],
     ],
+    abonnement: (r) => [
+      ["statut actif", r.html.includes("jours restants") && r.html.includes("expire le")],
+      ["cumul +30 jours", r.html.includes("Cumuler") && r.html.includes("Ajouter 30 jours")],
+      ["historique", r.html.includes("Historique")],
+      ["avertissement", r.html.includes("warn")],
+    ],
   };
-  for (const page of ["accueil", "selections", "exotiques", "bilan"]) {
+  for (const page of ["accueil", "selections", "exotiques", "bilan", "abonnement"]) {
     const r = await run(page);
-    const okNav = r.bnav.includes("Exotiques") && !r.bnav.includes("Séries") && r.hdr.includes("PRONOS");
+    const okNav = r.bnav.includes("Exotiques") && r.bnav.includes("Abonnement") && !r.bnav.includes("Séries") && r.hdr.includes("PRONOS");
     const res = (checks[page] || (() => []))(r);
     const bad = r.errs.length || !okNav || res.filter(([, ok]) => !ok).length;
     if (bad) ko++;

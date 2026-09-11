@@ -148,7 +148,7 @@
     const live = s.touche == null ? badgeLive(s.div, s.home, s.away) : "";
     return `<div class="mrow">
       <div class="l">
-        <div class="tiny mut">${esc((s.ligue || s.div || "").toUpperCase())} · ${esc(s.jour)}${s.heure ? " · " + esc(s.heure) : ""}</div>
+        <div class="tiny mut">${esc((s.ligue || s.div || "").toUpperCase())} · ${esc((s.jour || "").slice(8, 10) + "/" + (s.jour || "").slice(5, 7))}${s.heure ? " · " + esc(s.heure) : ""}</div>
         <div class="t" title="${esc(s.home)} vs ${esc(s.away)}">${esc(s.home)} <span class="mut">vs</span> ${esc(s.away)}</div>
         <div style="margin-top:3px"><span class="chip">${esc(s.option)}</span></div>
         <div style="margin-top:3px">${verdict}${live ? `<span class="live-score tiny cy" style="display:block" data-div="${esc(s.div || "")}" data-jour="${esc(s.jour || "")}" data-home="${esc(s.home || "")}" data-away="${esc(s.away || "")}">${esc(live)}</span>` : ""}</div>
@@ -174,7 +174,7 @@
                  : `<span class="pill rd">\u2717 manqu\u00e9</span>`;
     const cote = l.cote_juste != null ? l.cote_juste : (l.p ? 1 / l.p : null);
     return `<div class="case">
-      <div class="case-h"><span class="tiny mut">${esc(l.heure || "")}${l.ligue || l.div ? " \u00b7 " + esc(String(l.ligue || l.div)) : ""}</span>${verdict}</div>
+      <div class="case-h"><span class="tiny mut">${l.date ? l.date.slice(8, 10) + "/" + l.date.slice(5, 7) + " \u00b7 " : ""}${esc(l.heure || "")}${l.ligue || l.div ? " \u00b7 " + esc(String(l.ligue || l.div)) : ""}</span>${verdict}</div>
       <div class="case-t"><span class="team" title="${esc(l.home)}">${esc(l.home)}</span>
         <span class="mut tiny">vs</span>
         <span class="team" title="${esc(l.away)}">${esc(l.away)}</span></div>
@@ -400,6 +400,9 @@
      selections/combines) — si rien n'est archivé, la carte le dit. */
   /* Hier (11/09) : conseil touch\u00e9 et SAFE touch\u00e9, c'est tout \u2014 aucun
      d\u00e9tail de matchs sur l'accueil. */
+  /* Hier (correctif nuit du 11/09) : conseil = juste \u00ab 1/2 \u00b7 50 % \u00bb, sans
+     le mot \u00ab manqu\u00e9 \u00bb ; SAFE = pareil + petit badge touch\u00e9/manqu\u00e9. Aucun
+     d\u00e9tail de matchs sur l'accueil. */
   function carteVeille(D) {
     const h = hier();
     const sel = D.sel.filter((s) => (s.jour || "") === h && s.touche != null);
@@ -412,11 +415,12 @@
     const t = sel.filter((s) => s.touche).length;
     const n = sel.length;
     const conseil = !n ? `<span class="pill mu">aucun conseil</span>`
-      : t === n ? `<span class="pill em">\u2713 touch\u00e9${n > 1 ? ` (${t}/${n})` : ""}</span>`
-                : `<span class="pill rd">\u2717 manqu\u00e9${n > 1 ? ` (${t}/${n})` : ""}</span>`;
-    const etatSafe = !safe ? `<span class="pill mu">pas de SAFE</span>`
-      : safe.touche == null ? `<span class="pill am">en cours</span>`
-      : safe.touche ? `<span class="pill em">\u2713 touch\u00e9</span>` : `<span class="pill rd">\u2717 manqu\u00e9</span>`;
+      : `<span class="pill cy">${t}/${n} \u00b7 ${Math.round(100 * t / n)} %</span>`;
+    let etatSafe;
+    if (!safe) etatSafe = `<span class="pill mu">pas de SAFE</span>`;
+    else if (safe.touche == null) etatSafe = `<span class="pill am">en cours</span>`;
+    else etatSafe = `<span class="pill cy">${safe.touche ? "1/1 \u00b7 100 %" : "0/1 \u00b7 0 %"}</span> ` +
+      `<span class="pill ${safe.touche ? "em" : "rd"}">${safe.touche ? "\u2713 touch\u00e9" : "\u2717 manqu\u00e9"}</span>`;
     return `<div class="card"><div class="hd"><span class="lbl">Hier \u2014 ${esc(dateFr(h))}</span></div>
       <div class="mrow"><div class="l"><div class="t small">Conseil</div></div><div class="r">${conseil}</div></div>
       <div class="mrow"><div class="l"><div class="t small">SAFE</div></div><div class="r">${etatSafe}</div></div></div>`;
@@ -428,9 +432,11 @@
     selections: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
     exotiques: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.2"/></svg>',
     bilan: '<svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg>',
+    abonnement: '<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>',
   };
   const NAV = [["accueil", "index.html", "Accueil"], ["selections", "selections.html", "S\u00e9lections"],
-    ["exotiques", "exotiques.html", "Exotiques"], ["bilan", "bilan.html", "Bilan"]];
+    ["exotiques", "exotiques.html", "Exotiques"], ["bilan", "bilan.html", "Bilan"],
+    ["abonnement", "abonnement.html", "Abonnement"]];
 
   function coquille() {
     const h = document.getElementById("hdr");
@@ -486,6 +492,50 @@
     return { t: r.filter((x) => x.touche).length, n: r.length };
   };
 
+  /* Bilan exotique (11/09) : corners + buts d'affil\u00e9e, calcul\u00e9 depuis les
+     JSON publi\u00e9s par le robot (10 derniers jours pour l'instant \u2014 le suivi
+     r\u00e9el a d\u00e9marr\u00e9 le 10/09, rien d'ant\u00e9rieur n'est invent\u00e9). */
+  async function bilanExotique() {
+    const [C, A] = await Promise.all([
+      chargeJson("../pronos-foot/corners_jour.json"),
+      chargeJson("../pronos-foot/affilee_suivi.json")]);
+    if (!C && !A) return "";
+    const ds = debutSaison();
+    const stats = (vue) => {
+      if (!vue) return null;
+      let t = 0, n = 0, depuis = null;
+      for (const j of Object.keys(vue.jours || {}).sort()) {
+        if (j < ds) continue;
+        for (const m of (vue.jours[j].matchs || [])) {
+          const r = m.resultat;
+          if (!r || r.touche == null) continue;
+          n++; if (r.touche) t++;
+          if (!depuis) depuis = j;
+        }
+      }
+      return { t, n, depuis };
+    };
+    const sc = stats(C), sa = stats(A);
+    const kpi = (o, lb) => o == null
+      ? `<div class="kpi"><div class="v num">\u2014</div><div class="d">${lb} : pas encore publi\u00e9</div></div>`
+      : `<div class="kpi"><div class="v num ${o.n && o.t === o.n ? "em" : ""}">${o.n ? o.t + "/" + o.n : "\u2014"}</div>
+         <div class="d">${lb}${o.n ? " \u00b7 " + Math.round(100 * o.t / o.n) + " %" : ""}</div></div>`;
+    const depuis = [sc && sc.depuis, sa && sa.depuis].filter(Boolean).sort()[0];
+    return `<div class="card"><div class="hd"><span class="lbl">Bilan exotique</span>
+      <span class="pill cy">saison</span></div>
+      <div class="kpis" style="grid-template-columns:1fr 1fr">
+        ${kpi(sc, "corners touch\u00e9s")}${kpi(sa, "buts d'affil\u00e9e touch\u00e9s")}</div>
+      <div class="tiny mut" style="margin-top:8px">Suivi r\u00e9el d\u00e9marr\u00e9 le
+      ${depuis ? depuis.slice(8, 10) + "/" + depuis.slice(5, 7) + "/" + depuis.slice(0, 4) : "\u2014"} :
+      l'historique de la saison se constitue jour apr\u00e8s jour.</div></div>`;
+  }
+  function brancheBilanExotique() {
+    bilanExotique().then((h) => {
+      const z2 = document.getElementById("z-bilan-exotique");
+      if (z2 && h) z2.innerHTML = h;
+    });
+  }
+
   /* ---------------------------------------------------------- accueil */
   /* Trois volets (11/09) : \u2460 compteurs du mois (conseils / SAFE / cote 2 /
      cote 5 touch\u00e9s \u2014 remis \u00e0 z\u00e9ro le 1er de chaque mois), \u2461 hier : conseil
@@ -520,8 +570,7 @@
           <a class="btn ghost" href="exotiques.html">Choix exotiques</a>
         </div>
       </div>
-      <div class="card"><div class="hd"><span class="lbl">Ce mois-ci \u2014 ${esc(moisFr(cm.mois))}</span>
-        <span class="pill cy">\u00e0 z\u00e9ro le 1er</span></div>
+      <div class="card"><div class="hd"><span class="lbl">Ce mois-ci \u2014 ${esc(moisFr(cm.mois))}</span></div>
         <div class="kpis" style="grid-template-columns:1fr 1fr">
           ${kpiTouche(cm.conseil, "conseils touch\u00e9s")}
           ${kpiTouche(cm.safe, "SAFE touch\u00e9s")}
@@ -535,10 +584,26 @@
         : `<div class="small mut">Aucun conseil aujourd'hui : aucun match n'atteint les seuils
            mesur\u00e9s. Le robot s'abstient plut\u00f4t que de forcer \u2014 ce n'est pas un bug.</div>`}
       </div>
+      <div id="z-bilan-exotique"></div>
       <div class="warn">Informations chiffr\u00e9es issues d'un robot math\u00e9matique calibr\u00e9, jamais
         un conseil financier : probabilit\u00e9s \u2260 certitudes, aucune promesse de gain.</div>`;
+    brancheBilanExotique();
   }
 
+  /* Correctif nuit du 11/09 : un combin\u00e9 R\u00c9SOLU d'un jour pass\u00e9 ne doit
+     JAMAIS s'afficher comme \u00ab du jour \u00bb (bug vu \u00e0 1 h du matin : cote 5
+     d'hier \u00ab valid\u00e9e \u00bb \u00e0 la place du combin\u00e9 du jour). R\u00e8gle : celui du
+     jour ; \u00e0 d\u00e9faut, celui d'hier UNIQUEMENT s'il est encore en cours. */
+  function combiPertinent(D, nom) {
+    const rows = D.comb.filter((c) => (c.nom || "") === nom)
+      .sort((a, b) => (b.jour || "").localeCompare(a.jour || ""));
+    const c = rows[0];
+    if (!c) return null;
+    if (c.jour === aujourdHui()) return { c, titre: null };
+    if (c.jour === hier() && c.touche == null)
+      return { c, titre: nomBeau(nom).replace(" DU JOUR", " D'HIER") + " \u2014 en cours" };
+    return null;
+  }
   function carteSafeWeekend(D) {
     const sw = dernierComb(D, "safe_weekend");
     if (!sw) return "";
@@ -559,21 +624,20 @@
     const aVenir = D.sel.filter((s) => (s.jour || "") > auj && s.touche == null);
     function contenu(onglet) {
       if (onglet === "safe") {
-        const safe = dernierComb(D, "safe");
-        const pertinent = safe && (safe.jour === auj ||
-          (safe.jour === hier() && safe.touche == null));
-        const safeHtml = pertinent
-          ? carteCombine(safe, safe.jour === auj ? "SAFE DU JOUR" : "SAFE D'HIER \u2014 en cours")
+        const p = combiPertinent(D, "safe");
+        const safeHtml = p ? carteCombine(p.c, p.titre || "SAFE DU JOUR")
           : `<div class="card"><div class="hd"><span class="lbl ind">SAFE du jour</span></div>
-             <div class="small mut">Pas de SAFE aujourd'hui : aucune combinaison n'atteint les
-             seuils mesur\u00e9s. Le robot s'abstient plut\u00f4t que de forcer \u2014 ce n'est pas un bug.</div></div>`;
+             <div class="small mut">Pas (encore) de SAFE aujourd'hui : le robot archive chaque
+             heure \u2014 s'il s'abstient, c'est qu'aucune combinaison n'atteint les seuils
+             mesur\u00e9s. Ce n'est pas un bug.</div></div>`;
         return safeHtml + carteSafeWeekend(D);
       }
       if (onglet === "combine") {
-        const c2 = dernierComb(D, "cote2"), c5 = dernierComb(D, "cote5");
-        if (!c2 && !c5) return `<div class="empty">Aucun combin\u00e9 en cours : le robot s'abstient
-          plut\u00f4t que de forcer.</div>`;
-        return `${c2 ? carteCombine(c2) : ""}${c5 ? carteCombine(c5) : ""}`;
+        const c2 = combiPertinent(D, "cote2"), c5 = combiPertinent(D, "cote5");
+        if (!c2 && !c5) return `<div class="empty">Pas (encore) de combin\u00e9 aujourd'hui :
+          le robot archive chaque heure \u2014 s'il s'abstient, c'est qu'aucun seuil mesur\u00e9
+          n'est atteint.</div>`;
+        return `${c2 ? carteCombine(c2.c, c2.titre) : ""}${c5 ? carteCombine(c5.c, c5.titre) : ""}`;
       }
       return `
         <div class="card hi"><div class="hd"><span class="lbl">S\u00e9lections du jour</span>
@@ -601,7 +665,7 @@
      par match. Pourcentages 60\u2013100 % en 3 couleurs : vert \u2265 85, ambre 70\u201384,
      rouge 60\u201369. Match dans une case : \u00e9quipes, score en dessous, pr\u00e9diction,
      puis r\u00e9sultat. */
-  function caseExo(m, type) {
+  function caseExo(m, type, jour) {
     const non = type === "affilee" ? (m.non || {}) : m;
     const p = non.p;
     const r = m.resultat;
@@ -622,7 +686,7 @@
       }
     }
     return `<div class="case">
-      <div class="case-h"><span class="tiny mut">${esc(m.heure || "")}${m.ligue ? " \u00b7 " + esc(m.ligue) : ""}</span>${verdict}</div>
+      <div class="case-h"><span class="tiny mut">${jour ? jour.slice(8, 10) + "/" + jour.slice(5, 7) + " \u00b7 " : ""}${esc(m.heure || "")}${m.ligue ? " \u00b7 " + esc(m.ligue) : ""}</span>${verdict}</div>
       <div class="case-t"><span class="team" title="${esc(m.home)}">${esc(m.home)}</span>
         <span class="mut tiny">vs</span>
         <span class="team" title="${esc(m.away)}">${esc(m.away)}</span></div>
@@ -642,7 +706,7 @@
       const ms = jourExo(vue, j).matchs || [];
       if (!ms.length) return "";
       return `<div class="sect" style="margin-top:10px"><span class="lbl">${esc(dateFr(j))}</span><span class="line"></span></div>
-        <div class="cases">${ms.map((m) => caseExo(m, type)).join("")}</div>`;
+        <div class="cases">${ms.map((m) => caseExo(m, type, j)).join("")}</div>`;
     }).join("");
     if (!blocs) return "";
     return `<div class="card"><div class="hd"><span class="lbl">Jours pr\u00e9c\u00e9dents</span></div>${blocs}</div>`;
@@ -656,7 +720,7 @@
     return `
       <div class="card"><div class="hd"><span class="lbl em">Corners \u2014 s\u00e9lections du jour</span>
         <span class="pill cy">${ms.length}</span></div>
-        ${ms.length ? `<div class="cases">${ms.map((m) => caseExo(m, "corners")).join("")}</div>`
+        ${ms.length ? `<div class="cases">${ms.map((m) => caseExo(m, "corners", C.jour)).join("")}</div>`
         : `<div class="small mut">Aucune s\u00e9lection corners : aucun match ne tient un handicap
            calibr\u00e9 \u00e0 60 % ou plus de fr\u00e9quence r\u00e9elle mesur\u00e9e. Le robot s'abstient
            plut\u00f4t que de forcer.</div>`}
@@ -678,7 +742,7 @@
     return `
       <div class="card"><div class="hd"><span class="lbl">But d'affil\u00e9e \u2014 aujourd'hui</span>
         <span class="pill cy">${ms.length}</span></div>
-        ${ms.length ? `<div class="cases">${ms.map((m) => caseExo(m, "affilee")).join("")}</div>`
+        ${ms.length ? `<div class="cases">${ms.map((m) => caseExo(m, "affilee", A.jour)).join("")}</div>`
         : `<div class="small mut">Aucun conseil aujourd'hui : aucun match n'atteint 60 % sur un
            \u00ab NON \u00bb. Le robot s'abstient plut\u00f4t que de forcer.</div>`}
         <div class="tiny mut" style="margin-top:8px">Uniquement des NON \u2014 jamais de but d'affil\u00e9e
@@ -768,6 +832,7 @@
         <div class="kpis" style="grid-template-columns:1fr 1fr">
           ${cats.map(([lb, o]) => kpiTouche(o, lb)).join("")}
         </div></div>
+      <div id="z-bilan-exotique"></div>
       ${mois.length ? `<div class="sect"><span class="lbl">Historique mensuel</span><span class="line"></span></div>${graph}` : ""}
       <div class="sect"><span class="lbl">7 derniers jours</span><span class="line"></span></div>
       <div class="card"><div class="scrollx"><table class="tbl"><thead><tr>
@@ -776,6 +841,7 @@
         <div class="tiny mut" style="margin-top:6px">\u2713 touch\u00e9 \u00b7 \u2717 manqu\u00e9 \u00b7 \u2014 rien d'archiv\u00e9 ou pas encore r\u00e9solu ce jour-l\u00e0.</div></div>
       <div class="warn">Bilan sur r\u00e9sultats r\u00e9els archiv\u00e9s, jamais r\u00e9\u00e9crits. Probabilit\u00e9s \u2260
         certitudes : informations chiffr\u00e9es, jamais un conseil financier, aucune promesse de gain.</div>`;
+    brancheBilanExotique();
   }
 
   const PAYS_AFRIQUE = [
@@ -966,6 +1032,91 @@
     if (/email rate limit|over_email_send_rate_limit/i.test(m))
       return "Inscriptions momentanément bloquées : le serveur a dépassé sa limite d'envoi d'e-mails de confirmation. Réessaie dans 1 heure (ou préviens l'administrateur sur WhatsApp).";
     return m;
+  }
+
+  /* ------------------------------------------------------ abonnement */
+  /* Onglet Abonnement (11/09) : l'int\u00e9ress\u00e9 voit son abonnement (statut,
+     jours restants, expiration) et peut CUMULER : chaque activation ajoute
+     30 jours \u00e0 la date de fin. Paiement en ligne pas encore actif :
+     activation manuelle via WhatsApp (activation.html), comme convenu. */
+  async function pageAbonnement() {
+    const z = document.getElementById("z-contenu");
+    if (!z) return;
+    z.innerHTML = `<div class="empty">Chargement\u2026</div>`;
+    let session = null;
+    try {
+      if (SB) { const { data } = await SB.auth.getSession(); session = data && data.session; }
+    } catch (e) {}
+    const cta = `<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+        <a class="btn" href="activation.html">Activer / cumuler via WhatsApp</a>
+        <a class="btn ghost" href="connexion.html">J'ai d\u00e9j\u00e0 un compte</a></div>`;
+    const warn = `<div class="warn">Paiement en ligne pas encore actif sur ce site : activation
+      manuelle via WhatsApp, aucun pr\u00e9l\u00e8vement automatique. Probabilit\u00e9s \u2260 certitudes,
+      aucune promesse de gain.</div>`;
+    if (!session) {
+      z.innerHTML = `
+        <div class="card foc"><div class="hd"><span class="lbl">Abonnement</span>
+          <span class="pill mu">non connect\u00e9</span></div>
+          <h1 style="font-size:1.3rem">30 jours d'acc\u00e8s complet</h1>
+          <div class="small ink2" style="margin:6px 0 0">S\u00e9lections du jour, SAFE, combin\u00e9s
+          cote 2 / cote 5, choix exotiques (corners, buts d'affil\u00e9e) et bilan r\u00e9el.
+          Connecte-toi pour voir ton abonnement, ou active-le en 2 minutes via WhatsApp.</div>
+          <div class="ok small" style="margin-top:10px">Tu peux CUMULER : chaque activation
+          ajoute 30 jours \u00e0 ta date de fin.</div>
+          ${cta}</div>
+        ${warn}`;
+      return;
+    }
+    let rows = [];
+    try {
+      const r = await SB.from("abonnements").select("fin,plan")
+        .eq("user_id", session.user.id).order("fin", { ascending: false }).limit(12);
+      if (!r.error && r.data) rows = r.data;
+    } catch (e) {}
+    const aujD = aujourdHui();
+    const actif = rows.find((x) => String(x.fin || "").slice(0, 10) >= aujD);
+    if (!actif) {
+      z.innerHTML = `
+        <div class="card foc"><div class="hd"><span class="lbl">Mon abonnement</span>
+          <span class="pill rd">inactif</span></div>
+          <div class="small ink2">Tu n'as aucun abonnement actif en ce moment${rows.length ?
+            " (le dernier a expir\u00e9 le " + esc(String(rows[0].fin || "").slice(0, 10)) + ")" : ""}.
+          Active 30 jours d'acc\u00e8s complet via WhatsApp \u2014 tu peux cumuler les mois.</div>
+          ${cta}</div>
+        ${rows.length ? histoAbo(rows, aujD) : ""}
+        ${warn}`;
+      return;
+    }
+    const fin = String(actif.fin || "").slice(0, 10);
+    const restants = Math.max(0, Math.ceil((new Date(fin + "T23:59:59") - new Date()) / 86400000));
+    const pctBar = Math.max(2, Math.min(100, Math.round(100 * restants / 30)));
+    z.innerHTML = `
+      <div class="card foc"><div class="hd"><span class="lbl">Mon abonnement</span>
+        <span class="pill em"><span class="dot"></span>actif</span></div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr">
+          <div class="kpi"><div class="v num em">${restants}</div><div class="d">jours restants</div></div>
+          <div class="kpi"><div class="v num">${fin.slice(8, 10)}/${fin.slice(5, 7)}/${fin.slice(0, 4)}</div>
+            <div class="d">expire le</div></div>
+        </div>
+        <div class="bar" style="margin-top:10px"><i style="width:${pctBar}%"></i></div>
+        <div class="tiny mut" style="margin-top:6px">Plan ${esc(actif.plan || "mensuel")} \u00b7
+        acc\u00e8s : s\u00e9lections, SAFE, combin\u00e9s, choix exotiques, bilan.</div></div>
+      <div class="card"><div class="hd"><span class="lbl">Cumuler</span><span class="pill cy">+30 jours</span></div>
+        <div class="small ink2">Chaque nouvelle activation <b>ajoute 30 jours</b> \u00e0 ta date de
+        fin \u2014 tu peux cumuler autant de mois que tu veux, sans pr\u00e9l\u00e8vement automatique.</div>
+        <a class="btn" style="margin-top:10px" href="activation.html">Ajouter 30 jours via WhatsApp</a></div>
+      ${histoAbo(rows, aujD)}
+      ${warn}`;
+  }
+  function histoAbo(rows, aujD) {
+    if (!rows || !rows.length) return "";
+    return `<div class="card"><div class="hd"><span class="lbl">Historique</span></div>
+      ${rows.map((x) => {
+        const f = String(x.fin || "").slice(0, 10);
+        return `<div class="mrow"><div class="l"><div class="t small">Jusqu'au ${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}</div>
+        <div class="tiny mut">${esc(x.plan || "mensuel")}</div></div>
+        <div class="r">${f >= aujD ? `<span class="pill em">actif</span>` : `<span class="pill mu">expir\u00e9</span>`}</div></div>`;
+      }).join("")}</div>`;
   }
 
   function pageAuth(mode) {
@@ -1263,7 +1414,8 @@
       if (!SB) banniere("Connexion indisponible : clé publique Supabase absente de assets/config.js.");
       else pageAuth(PAGE);
     }
-    if (besoinAuth || besoinData) await sessionPret();
+    if (besoinAuth || besoinData || PAGE === "abonnement") await sessionPret();
+    if (PAGE === "abonnement") { pageAbonnement(); etatSession(); return; }
     if (besoinData) {
       const D = await charge();
       window.__ACC = await accesOk();
