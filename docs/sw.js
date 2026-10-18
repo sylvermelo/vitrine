@@ -1,7 +1,7 @@
 /* Service worker vitrine : coquille en cache (hors-ligne), pages ET scripts
    en network-first (jamais de vieille version servie quand le réseau existe).
    addAll tolérant : un fichier manquant n'empêche plus l'installation. */
-const CACHE = "vitrine-v9-11-09";
+const CACHE = "vitrine-2026-10-18";
 const COQUILLE = [
   "./", "./index.html", "./selections.html", "./exotiques.html", "./abonnement.html", "./corners.html", "./series.html", "./bilan.html",
   "./acces.html", "./connexion.html", "./inscription.html", "./paiement.html",
@@ -17,14 +17,14 @@ self.addEventListener("install", (e) => {
 });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(
-    ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+    ks.filter((k) => k.startsWith("vitrine-") && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;           // CDNs : réseau direct
   const estNavig = e.request.mode === "navigate";
-  const estScript = /\.(js|json|webmanifest)(\?|$)/.test(url.pathname);
+  const estScript = /\.(js|css|json|webmanifest)(\?|$)/.test(url.pathname);
   if (estNavig || estScript) {
     /* network-first : toujours la dernière version, cache seulement en secours */
     e.respondWith(fetch(e.request)

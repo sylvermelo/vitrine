@@ -6,7 +6,7 @@
 const fs = require("fs"), vm = require("vm");
 const SRC = fs.readFileSync("docs/assets/app.js", "utf8");
 const CFG = fs.readFileSync("docs/assets/config.js", "utf8");
-const DATA_ROBOT = "/home/user/pronos-foot/data/";
+const DATA_ROBOT = require("path").resolve(__dirname, "../pronos-foot/data") + "/";
 const CORNERS = JSON.parse(fs.readFileSync(DATA_ROBOT + "corners_jour.json", "utf8"));
 const AFFILEE = JSON.parse(fs.readFileSync(DATA_ROBOT + "affilee_suivi.json", "utf8"));
 const COMBINES_JOUR = JSON.parse(fs.readFileSync(DATA_ROBOT + "combines_jour.json", "utf8"));
@@ -87,6 +87,7 @@ function mkChain(table) {
 }
 const SB = {
   from: (t) => mkChain(t),
+  rpc: async () => ({data:{sel:SEL_ROWS,comb:COMB_ROWS}}),
   auth: {
     getSession: async () => ({ data: { session: { user: { id: "u1", email: "t2290196575755@tel.pronos-foot.bj" } } } }),
     onAuthStateChange: () => {}, signOut: async () => {},
@@ -151,11 +152,11 @@ async function run(page) {
     selections: (r) => [
       ["3 onglets", r.html.includes('data-tab="jour"') && r.html.includes('data-tab="safe"') && r.html.includes('data-tab="combine"')],
       ["jour : Arsenal", r.html.includes("Arsenal")],
-      ["onglet SAFE : safe du jour (source robot)", (r.snaps.safe || "").includes("SAFE DU JOUR") && (r.snaps.safe || "").includes("1.46")],
-      ["onglet SAFE : cotes justes des jambes", (r.snaps.safe || "").includes("cote juste")],
-      ["onglet SAFE : week-end (source robot)", (r.snaps.safe || "").includes("WEEK-END") && (r.snaps.safe || "").includes("2.39")],
+      ["onglet SAFE : safe du jour (source robot)", (r.snaps.safe || "").includes("SAFE DU JOUR")],
+      ["onglet SAFE : pas de cote calculée", !(r.snaps.safe || "").includes("cote juste") && !(r.snaps.safe || "").includes("1.46")],
+      ["onglet SAFE : week-end (source robot)", (r.snaps.safe || "").includes("WEEK-END")],
       ["onglet Combiné : 2 sous-onglets cliquables", (r.snaps.combine || "").includes('data-sub="cote2"') && (r.snaps.combine || "").includes('data-sub="cote5"')],
-      ["onglet Combiné : cote 2 du jour (source robot)", (r.snaps.combine || "").includes("COTE 2 DU JOUR") && (r.snaps.combine || "").includes("2.12")],
+      ["onglet Combiné : cote 2 du jour (source robot)", (r.snaps.combine || "").includes("COTE 2 DU JOUR")],
       ["onglet Combiné : PAS la cote 5 résolue d'hier", !(r.snaps.combine || "").includes("COTE 5 DU JOUR") && !(r.snaps.combine || "").includes("validé")],
       ["avertissement en bas", r.html.includes("warn")],
     ],
@@ -164,7 +165,7 @@ async function run(page) {
       ["corners : sélections du jour", (r.snaps.corners || r.tab).includes("sélections du jour")],
       ["corners : cases + couleur", (r.snaps.corners || r.tab).includes("pct-badge") && /p-(vert|ambre|rouge)/.test(r.snaps.corners || r.tab)],
       ["corners : PLUS de coupon", !(r.snaps.corners || r.tab).includes("montante")],
-      ["corners : cote juste affichée", (r.snaps.corners || r.tab).includes("cote juste")],
+      ["corners : pas de cote calculée", !(r.snaps.corners || r.tab).includes("cote juste")],
       ["affilée : rendue", (r.snaps.affilee || "").includes("But d'affilée — aujourd'hui")],
       ["affilée : NON seulement", (r.snaps.affilee || "").includes("NON") && !(r.snaps.affilee || "").includes("— OUI")],
       ["affilée : résultats", (r.snaps.affilee || "").includes("touché") || (r.snaps.affilee || "").includes("en attente")],

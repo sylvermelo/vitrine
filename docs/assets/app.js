@@ -155,14 +155,14 @@
       </div>
       <div class="r">
         <div class="pct em" style="font-family:var(--f-disp);font-weight:800;font-size:17px">${pct(s.p)}</div>
-        <div class="tiny mut">cote juste ${f2(s.cote_juste)}</div>
+        <div class="tiny mut">${s.cote_marche ? "cote bookmaker " + f2(s.cote_marche) : "Analyse · cote indisponible"}</div>
         ${s.confiance ? `<div class="tiny mut">conf. ${esc(s.confiance)}</div>` : ""}
       </div></div>`;
   }
 
   /* Case détaillée d'un match (disposition utilisateur 11/09) : équipes
      jamais coupées, score EN DESSOUS dans la case, prédiction, puis résultat.
-     Cotes = issues des calculs du robot (cote juste), jamais d'un bookmaker. */
+     Cotes = issues des calculs du robot (cote bookmaker), jamais d'un bookmaker. */
   function caseLeg(l) {
     const r = l.resultat || {};
     const resolu = r.touche != null;
@@ -172,7 +172,7 @@
       ? `<span class="pill mu">en attente</span>`
       : r.touche ? `<span class="pill em">\u2713 touch\u00e9</span>`
                  : `<span class="pill rd">\u2717 manqu\u00e9</span>`;
-    const cote = l.cote_juste != null ? l.cote_juste : (l.p ? 1 / l.p : null);
+    const cote = l.cotation ? l.cote_marche : null;
     return `<div class="case">
       <div class="case-h"><span class="tiny mut">${l.date ? l.date.slice(8, 10) + "/" + l.date.slice(5, 7) + " \u00b7 " : ""}${esc(l.heure || "")}${l.ligue || l.div ? " \u00b7 " + esc(String(l.ligue || l.div)) : ""}</span>${verdict}</div>
       <div class="case-t"><span class="team" title="${esc(l.home)}">${esc(l.home)}</span>
@@ -181,7 +181,7 @@
       ${score ? `<div class="case-score">${score}</div>` : ""}
       <div class="case-p"><span class="chip">${esc(l.option)}</span>
         ${l.p ? `<span class="pct em" style="font-family:var(--f-disp);font-weight:800">${pct(l.p)}</span>` : ""}
-        ${cote ? `<span class="tiny mut">cote juste <b class="ink2 num">${f2(cote)}</b></span>` : ""}</div>
+        ${cote ? `<span class="tiny mut">cote bookmaker <b class="ink2 num">${f2(cote)}</b></span>` : ""}</div>
     </div>`;
   }
 
@@ -196,16 +196,13 @@
       : `<span class="pill mu">en attente</span>`;
     const origine = (c.brut && c.brut.origine)
       ? `<div class="err small" style="margin:8px 0 0">${esc(c.brut.origine)}</div>` : "";
-    let coteAff = c.cote;
-    if (coteAff == null) {           /* repli : produit des cotes justes des jambes */
-      let prod = 1, ok = jambes.length > 0;
-      for (const l of jambes) { if (l.p) prod *= 1 / l.p; else ok = false; }
-      if (ok) coteAff = Math.round(prod * 100) / 100;
-    }
+    const livres=new Set(jambes.map(l=>l.cotation&&l.cotation.bookmaker));
+    const coteAff=jambes.length&&livres.size===1&&!livres.has(undefined)&&jambes.every(l=>l.cote_marche>1)
+      ? Math.round(jambes.reduce((p,l)=>p*l.cote_marche,1)*100)/100 : null;
     return `<div class="card">
       <div class="hd"><span class="lbl ind">${esc(titre || nomBeau(c.nom))}</span>${etat}</div>
       <div class="kpis" style="grid-template-columns:1fr 1fr">
-        <div class="kpi"><div class="v num">${f2(coteAff)}</div><div class="d">cote totale (calcul)</div></div>
+        <div class="kpi"><div class="v num">${f2(coteAff)}</div><div class="d">cote totale bookmaker</div></div>
         <div class="kpi"><div class="v num cy">${pct(c.p_combine)}</div><div class="d">proba combin\u00e9e</div></div>
       </div>
       <div class="cases">${jambes.slice(0, 10).map(caseLeg).join("")}</div>
@@ -219,6 +216,7 @@
   }
 
   async function charge() {
+    if(PAGE === "exotiques") return {sel:[],comb:[]};
     if (!CFG.SUPABASE_URL || !CFG.SUPABASE_ANON_KEY || CFG.SUPABASE_ANON_KEY === "A_COLLER") {
       banniere("Vitrine non connectée : clé publique Supabase absente de assets/config.js.");
       return null;
@@ -231,9 +229,14 @@
     for (let essai = 1; essai <= ESSAIS; essai++) {
       try {
         SB = SB || window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+        if (PAGE === "bilan") {
+          const r = await SB.rpc("bilan_saison", {debut: debutSaison()});
+          if (r.error) throw r.error;
+          return r.data || {sel:[], comb:[]};
+        }
         const [sel, comb] = await Promise.all([
-          SB.from("selections").select("*").order("jour", { ascending: false }).limit(400),
-          SB.from("combines").select("*").order("jour", { ascending: false }).limit(500),
+          SB.from("selections").select("jour,div,ligue,heure,home,away,option,p,cote_marche,confiance,touche,buts_home,buts_away").order("jour", { ascending: false }).limit(1000),
+          SB.from("combines").select("jour,nom,p_combine,cote,touche,jambes").order("jour", { ascending: false }).limit(1000),
         ]);
         if (sel.error) throw sel.error;
         if (comb.error) throw comb.error;
@@ -241,8 +244,7 @@
       } catch (e) {
         if (essai === ESSAIS) {
           banniere("Lecture Supabase impossible après " + ESSAIS + " tentatives : " +
-            "vérifiez la connexion, ou collez les politiques RLS " +
-            "(supabase/rls_vitrine.sql du repo robot) dans le SQL Editor, puis rechargez.");
+            "vérifiez la connexion puis réessayez. Si le problème persiste, contactez le support.");
           return null;
         }
         await new Promise((r) => setTimeout(r, 900 * essai));
@@ -494,8 +496,11 @@
       <div class="d">${lb}${o.n ? " \u00b7 " + Math.round(100 * o.t / o.n) + " %" : ""}</div></div>`;
   }
   const kTouche = (rows) => {
-    const r = rows.filter((x) => x.touche != null);
-    return { t: r.filter((x) => x.touche).length, n: r.length };
+    return rows.reduce((a, x) => {
+      if (Number.isInteger(x.n) && Number.isInteger(x.t)) {a.n += x.n; a.t += x.t;}
+      else if (x.touche != null) {a.n++; if (x.touche) a.t++;}
+      return a;
+    }, {t:0,n:0});
   };
 
   /* Bilan exotique (11/09) : corners + buts d'affil\u00e9e, calcul\u00e9 depuis les
@@ -528,12 +533,12 @@
          <div class="d">${lb}${o.n ? " \u00b7 " + Math.round(100 * o.t / o.n) + " %" : ""}</div></div>`;
     const depuis = [sc && sc.depuis, sa && sa.depuis].filter(Boolean).sort()[0];
     return `<div class="card"><div class="hd"><span class="lbl">Bilan exotique</span>
-      <span class="pill cy">saison</span></div>
+      <span class="pill cy">période publiée</span></div>
       <div class="kpis" style="grid-template-columns:1fr 1fr">
         ${kpi(sc, "corners touch\u00e9s")}${kpi(sa, "buts d'affil\u00e9e touch\u00e9s")}</div>
       <div class="tiny mut" style="margin-top:8px">Suivi r\u00e9el d\u00e9marr\u00e9 le
       ${depuis ? depuis.slice(8, 10) + "/" + depuis.slice(5, 7) + "/" + depuis.slice(0, 4) : "\u2014"} :
-      l'historique de la saison se constitue jour apr\u00e8s jour.</div></div>`;
+      ce bilan porte sur les jours présents dans les données publiées.</div></div>`;
   }
   function brancheBilanExotique() {
     bilanExotique().then((h) => {
@@ -710,7 +715,7 @@
     z.innerHTML = tabsHtml("jour", [["jour", "S\u00e9lection du jour"], ["safe", "SAFE"], ["combine", "Combin\u00e9"]])
       + `<div id="tab-contenu">${contenu("jour")}</div>
       <div class="warn">Combin\u00e9s publi\u00e9s par le robot (m\u00eame source que le site pronos-foot,
-        mis \u00e0 jour chaque heure). Cotes affich\u00e9es = calcul du robot (cote juste), jamais celles
+        mis \u00e0 jour chaque heure). Cotes affich\u00e9es = calcul du robot (cote bookmaker), jamais celles
         d'un bookmaker. Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions
         instables exclues sous 85 % (conseils) et 90 % (SAFE/combin\u00e9s), coupes jamais dans les
         s\u00e9lections suivies.</div>`;
@@ -760,12 +765,11 @@
       ${score}
       <div class="case-p"><span class="chip">${esc(non.option || "")}</span>
         ${p != null ? `<span class="pct-badge ${couleurP(p)}">${pct(p)}</span>` : ""}
-        ${coteJusteExo(non, p) ? `<span class="tiny mut">cote juste <b class="ink2 num">${f2(coteJusteExo(non, p))}</b></span>` : ""}</div>
+        ${coteJusteExo(non, p) ? `<span class="tiny mut">cote bookmaker <b class="ink2 num">${f2(coteJusteExo(non, p))}</b></span>` : ""}</div>
     </div>`;
   }
 
-  const coteJusteExo = (non, p) => non && non.cote_juste != null ? non.cote_juste
-    : (p ? Math.round((1 / p) * 100) / 100 : null);
+  const coteJusteExo = (non, p) => non && non.cotation ? non.cote_marche : null;
   const jourExo = (vue, jour) => ((vue && vue.jours) || {})[jour] || { matchs: [] };
 
   function histoExo(vue, type) {
@@ -796,7 +800,7 @@
            plut\u00f4t que de forcer.</div>`}
         <div class="tiny mut" style="margin-top:8px">Un seul choix clair par match : le handicap le plus
         p\u00e9nalisant sur la dominante attendue qui tient encore. R\u00e9sultat via
-        football-data.co.uk (1 \u00e0 3 jours de d\u00e9lai \u2014 \u00ab en attente \u00bb tant qu'il manque).</div></div>
+        ESPN après confirmation finale ; football-data.co.uk en complément. En attente si les données sont incomplètes.</div></div>
       ${histoExo(C, "corners")}
       <div class="card"><div class="hd"><span class="lbl">Calibration honn\u00eate</span></div>
         <div class="small ink2">Probabilit\u00e9s <b>calibr\u00e9es</b> en walk-forward : le mod\u00e8le brut
