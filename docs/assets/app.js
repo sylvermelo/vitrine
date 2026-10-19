@@ -668,11 +668,36 @@
         b.dataset.sub === "cote2" ? "COTE 2 DU JOUR" : "COTE 5 DU JOUR");
     }));
   }
+  function renduButeurs(B) {
+    if(!B)return '<div class="card"><div class="small mut">Collecte des buteurs en cours. Réessaie après la prochaine publication du robot.</div></div>';
+    const h=B.historique||{},ev=B.evaluation||{},test=ev.test||{};
+    let html=`<div class="card hi"><div class="hd"><span class="lbl">BUTEURS — ANALYSE INDIVIDUELLE</span><span class="pill am">${esc(ev.statut||'experimental')}</span></div>
+      <p class="small mut">${h.matchs||0} matchs vérifiés, ${h.joueurs||0} joueurs observés. Probabilités conditionnelles à la titularisation ; temps de jeu tiré des matchs précédents. Aucun coupon automatique.</p>
+      <p class="small mut">${esc(B.note||'')} Test chronologique : ${test.matchs||0} matchs, ${test.n||0} prévisions. ${test.brier!=null?'Brier : '+f2(test.brier)+' (référence '+f2(test.baseline_brier)+').':''}</p></div>`;
+    const now=Date.now(),matches=(B.matchs||[]).filter(m=>Date.parse(m.debut_utc)>now);
+    if(!matches.length)html+='<div class="card"><p class="small mut">Aucun match à venir dans la fenêtre collectée. Le robot ne force aucune sélection.</p></div>';
+    for(const m of matches){
+      html+=`<div class="card"><div class="hd"><span class="lbl">${esc(m.home)} — ${esc(m.away)}</span></div>
+        <p class="tiny mut">${esc(m.date)} ${esc(m.heure||'')} · ${m.composition_confirmee?'Titulaires confirmés':'Observation — composition attendue'}</p>`;
+      const ps=(m.joueurs||[]).filter(p=>p.analyse).slice(0,8);
+      if(!ps.length)html+='<p class="small mut">Historique individuel encore insuffisant.</p>';
+      for(const p of ps){const a=p.analyse,q=p.cotation;
+        const prix=q&&Date.parse(q.commence_time)>now&&now-Date.parse(q.last_update)>=0&&now-Date.parse(q.last_update)<=86400000?f2(q.price)+' · '+esc(q.bookmaker_nom||q.bookmaker)+' (US)':'Cote indisponible';
+        html+=`<div class="small" style="padding:10px 0;border-top:1px solid var(--line)"><b>${esc(p.nom)}</b> · ${esc(p.equipe)}<br>
+          ${a.buts} buts en ${a.matchs} matchs · ${a.minutes_si_titulaire} min si titulaire<br>
+          Marque au moins une fois : <b>${pct(a.p)}</b> · ${prix}</div>`;
+      }
+      html+='</div>';
+    }
+    const suivi=B.suivi||{};
+    return html+`<div class="card"><p class="small mut">${suivi.n||0} prévisions figées résolues sur ${suivi.matchs||0} matchs. Aucune rentabilité annoncée sans prix réellement archivés.</p></div>`;
+  }
+
   function pageSelections(D) {
     const z = document.getElementById("z-contenu");
     if (!z) return;
     const auj = aujourdHui();
-    let J = null, actif = "jour";
+    let J = null, B = null, actif = "jour";
     function renduJour() {
       const duJour = D.sel.filter((s) => (s.jour || "") === auj);
       const aVenir = D.sel.filter((s) => (s.jour || "") > auj && s.touche == null);
@@ -703,6 +728,7 @@
       return safeHtml + carteSafeWeekend(D, J);
     }
     function contenu(onglet) {
+      if (onglet === "buteurs") return renduButeurs(B);
       if (onglet === "safe") return renduSafe();
       if (onglet === "combine") return renduCombine(D, J);
       return renduJour();
@@ -712,11 +738,10 @@
       if (c) c.innerHTML = contenu(actif);
       if (actif === "combine") bindSubCombine(z, D, J);
     }
-    z.innerHTML = tabsHtml("jour", [["jour", "S\u00e9lection du jour"], ["safe", "SAFE"], ["combine", "Combin\u00e9"]])
+    z.innerHTML = tabsHtml("jour", [["jour", "S\u00e9lection du jour"], ["safe", "SAFE"], ["combine", "Combin\u00e9"], ["buteurs", "Buteurs"]])
       + `<div id="tab-contenu">${contenu("jour")}</div>
       <div class="warn">Combin\u00e9s publi\u00e9s par le robot (m\u00eame source que le site pronos-foot,
-        mis \u00e0 jour chaque heure). Cotes affich\u00e9es = calcul du robot (cote bookmaker), jamais celles
-        d'un bookmaker. Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions
+        mis \u00e0 jour chaque heure). Cotes affich\u00e9es = prix bookmaker réellement reçus ; sans prix exact, analyse seule. Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions
         instables exclues sous 85 % (conseils) et 90 % (SAFE/combin\u00e9s), coupes jamais dans les
         s\u00e9lections suivies.</div>`;
     z.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
@@ -724,6 +749,9 @@
       z.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
       rafraichis();
     }));
+    chargeJson("../pronos-foot/buteurs_jour.json").then((b) => {
+      B=b; if(actif==='buteurs')rafraichis();
+    });
     chargeJson("../pronos-foot/combines_jour.json").then((j) => {
       if (!j) return;
       J = j;
