@@ -146,7 +146,7 @@
       `<span class="tiny ${s.touche ? "em" : "rd"}" style="font-weight:700">` +
       `${s.touche ? "✓ TOUCHÉE" : "✗ MANQUÉE"} ${s.buts_home ?? ""}-${s.buts_away ?? ""}</span>`;
     const live = s.touche == null ? badgeLive(s.div, s.home, s.away) : "";
-    return `<div class="mrow">
+    return `<article class="ux-selection">
       <div class="l">
         <div class="tiny mut">${esc((s.ligue || s.div || "").toUpperCase())} · ${esc((s.jour || "").slice(8, 10) + "/" + (s.jour || "").slice(5, 7))}${s.heure ? " · " + esc(s.heure) : ""}</div>
         <div class="t" title="${esc(s.home)} vs ${esc(s.away)}">${esc(s.home)} <span class="mut">vs</span> ${esc(s.away)}</div>
@@ -157,7 +157,7 @@
         <div class="pct em" style="font-family:var(--f-disp);font-weight:800;font-size:17px">${pct(s.p)}</div>
         <div class="tiny mut">${s.cote_marche ? "cote bookmaker " + f2(s.cote_marche) : "Analyse · cote indisponible"}</div>
         ${s.confiance ? `<div class="tiny mut">conf. ${esc(s.confiance)}</div>` : ""}
-      </div></div>`;
+      </div></article>`;
   }
 
   /* Case détaillée d'un match (disposition utilisateur 11/09) : équipes
@@ -451,7 +451,7 @@
     if (h) h.innerHTML = `<div class="in">
       <div class="brand"><img src="assets/logo.png" alt="Pronos Foot">
         <div style="min-width:0"><div class="t1">PRONOS<b>FOOT</b></div>
-        <div class="t2"><span class="dot"></span>robot mathématique · sync</div></div></div>
+        <div class="t2"><span class="dot"></span>Des conseils. Des résultats.</div></div></div>
       <button id="v-compte" class="hbtn" title="Connexion" aria-label="Compte">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
       </button></div>`;
@@ -570,16 +570,17 @@
     const auj = aujourdHui();
     const duJour = D.sel.filter((s) => (s.jour || "") === auj);
     z.innerHTML = `
-      <div class="card foc">
-        <div class="hd"><span class="lbl">Terminal du jour</span><span class="pill cy"><span class="dot"></span>sync</span></div>
-        <h1 style="font-size:1.45rem">Le robot math\u00e9matique<br>du football</h1>
-        <div class="small ink2" style="margin:6px 0 12px">Moteur Dixon-Coles calibr\u00e9 en walk-forward sur
-          des dizaines de milliers de matchs r\u00e9els. Pas d'intelligence artificielle : des probabilit\u00e9s
-          mesur\u00e9es, des limites affich\u00e9es, aucune promesse de gain.</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <a class="btn" href="selections.html">Voir les s\u00e9lections du jour</a>
-          <a class="btn ghost" href="exotiques.html">Choix exotiques</a>
-        </div>
+      <div class="card foc ux-today"><div class="hd"><span class="lbl">Aujourd'hui · les conseils</span>
+        <span class="pill ind">${duJour.length} conseil${duJour.length > 1 ? "s" : ""}</span></div>
+        <h2>Les matchs à regarder aujourd’hui.</h2>
+        ${duJour.length ? duJour.slice(0, 4).map(ligneSelection).join("")
+        : `<p class="small mut" style="margin:14px 0 20px">Aucun conseil éligible pour le moment. Le robot attend des matchs qui remplissent ses critères.</p>`}
+        <a class="btn" href="selections.html" style="margin-top:12px">Voir toutes les sélections</a>
+      </div>
+      <div class="ux-actions" style="grid-column:1/-1">
+        <a class="ux-action" href="selections.html"><b>Explorer les choix ↗</b><span>Combinés, buteurs et autres marchés</span></a>
+        <a class="ux-action" href="bilan.html"><b>Les résultats ↗</b><span>Le suivi des pronostics publiés</span></a>
+        <a class="ux-action" href="abonnement.html"><b>Mon accès ↗</b><span>Statut et activation de l’abonnement</span></a>
       </div>
       <div class="card"><div class="hd"><span class="lbl">Ce mois-ci \u2014 ${esc(moisFr(cm.mois))}</span></div>
         <div class="kpis" style="grid-template-columns:1fr 1fr">
@@ -589,12 +590,6 @@
           ${kpiTouche(cm.cote5, "cote 5 touch\u00e9s")}
         </div></div>
       ${carteVeille(D)}
-      <div class="card"><div class="hd"><span class="lbl">Aujourd'hui</span>
-        <span class="pill ind">${duJour.length} conseil${duJour.length > 1 ? "s" : ""}</span></div>
-        ${duJour.length ? duJour.slice(0, 4).map(ligneSelection).join("")
-        : `<div class="small mut">Aucun conseil aujourd'hui : aucun match n'atteint les seuils
-           mesur\u00e9s. Le robot s'abstient plut\u00f4t que de forcer \u2014 ce n'est pas un bug.</div>`}
-      </div>
       <div id="z-bilan-exotique"></div>
       <div class="warn">Informations chiffr\u00e9es issues d'un robot math\u00e9matique calibr\u00e9, jamais
         un conseil financier : probabilit\u00e9s \u2260 certitudes, aucune promesse de gain.</div>`;
@@ -796,10 +791,10 @@ function buteursConseilsBind(root,filtre,refresh){
     }
     z.innerHTML = tabsHtml("jour", [["jour", "S\u00e9lection du jour"], ["safe", "SAFE"], ["combine", "Combin\u00e9"], ["buteurs", "Buteurs"]])
       + `<div id="tab-contenu">${contenu("jour")}</div>
-      <div class="warn">Combin\u00e9s publi\u00e9s par le robot (m\u00eame source que le site pronos-foot,
+      <details class="ux-method"><summary>Comprendre les sélections et leurs limites</summary><div class="warn">Combin\u00e9s publi\u00e9s par le robot (m\u00eame source que le site pronos-foot,
         mis \u00e0 jour chaque heure). Cotes affich\u00e9es = prix bookmaker réellement reçus ; sans prix exact, analyse seule. Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions
         instables exclues sous 85 % (conseils) et 90 % (SAFE/combin\u00e9s), coupes jamais dans les
-        s\u00e9lections suivies.</div>`;
+        s\u00e9lections suivies.</div></details>`;
     z.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
       actif = b.dataset.tab;
       z.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
@@ -1206,7 +1201,7 @@ function buteursConseilsBind(root,filtre,refresh){
       if (SB) { const { data } = await SB.auth.getSession(); session = data && data.session; }
     } catch (e) {}
     const cta = `<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
-        <a class="btn" href="activation.html">Activer / cumuler via WhatsApp</a>
+        <a class="btn" href="activation.html">Activer ou prolonger mon accès</a>
         <a class="btn ghost" href="connexion.html">J'ai d\u00e9j\u00e0 un compte</a></div>`;
     const warn = `<div class="warn">Paiement en ligne pas encore actif sur ce site : activation
       manuelle via WhatsApp, aucun pr\u00e9l\u00e8vement automatique. Probabilit\u00e9s \u2260 certitudes,
@@ -1218,7 +1213,7 @@ function buteursConseilsBind(root,filtre,refresh){
           <h1 style="font-size:1.3rem">30 jours d'acc\u00e8s complet</h1>
           <div class="small ink2" style="margin:6px 0 0">S\u00e9lections du jour, SAFE, combin\u00e9s
           cote 2 / cote 5, choix exotiques (corners, buts d'affil\u00e9e) et bilan r\u00e9el.
-          Connecte-toi pour voir ton abonnement, ou active-le en 2 minutes via WhatsApp.</div>
+          Connecte-toi pour voir ton abonnement, ou demande son activation via WhatsApp.</div>
           <div class="ok small" style="margin-top:10px">Tu peux CUMULER : chaque activation
           ajoute 30 jours \u00e0 ta date de fin.</div>
           ${cta}</div>
