@@ -89,7 +89,7 @@ const SB = {
   from: (t) => mkChain(t),
   rpc: async () => ({data:{sel:SEL_ROWS,comb:COMB_ROWS}}),
   auth: {
-    getSession: async () => ({ data: { session: { user: { id: "u1", email: "t2290100000000@tel.pronos-foot.bj" } } } }),
+    getSession: async () => ({ data: { session: { user: { id: "u1", email: "navigation-test@example.invalid" } } } }),
     onAuthStateChange: () => {}, signOut: async () => {},
   },
 };
@@ -197,7 +197,7 @@ async function run(page) {
   };
   for (const page of ["accueil", "selections", "exotiques", "bilan", "abonnement", "hockey", "europe"]) {
     const r = await run(page);
-    const okNav = r.bnav.includes("Exotiques") && r.bnav.includes("Abonnement") && !r.bnav.includes("Séries") && r.hdr.includes("PRONO") && r.hdr.includes("CLAIR");
+    const okNav = r.bnav.includes("Accueil") && r.bnav.includes("Bilan") && !r.bnav.includes("Exotiques") && !r.bnav.includes("europe.html") && !r.bnav.includes("hockey.html") && r.bnav.includes("Abonnement") && !r.bnav.includes("Séries") && r.hdr.includes("PRONO") && r.hdr.includes("CLAIR");
     const res = (checks[page] || (() => []))(r);
     const bad = r.errs.length || !okNav || res.filter(([, ok]) => !ok).length;
     if (bad) ko++;

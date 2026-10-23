@@ -500,8 +500,7 @@ async function pageEurope(){const data=await chargeJson(ROBOT_BASE+'/europe_jour
     bilan: '<svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg>',
     abonnement: '<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>',
   };
-  const NAV = [["accueil", "index.html", "Accueil"], ["selections", "selections.html", "S\u00e9lections"],
-    ["exotiques", "exotiques.html", "Exotiques"], ["bilan", "bilan.html", "Bilan"],
+  const NAV = [["accueil", "index.html", "Accueil"], ["bilan", "bilan.html", "Bilan"],
     ["abonnement", "abonnement.html", "Abonnement"]];
 
   function coquille() {
@@ -513,12 +512,6 @@ async function pageEurope(){const data=await chargeJson(ROBOT_BASE+'/europe_jour
       <button id="v-compte" class="hbtn" title="Connexion" aria-label="Compte">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
       </button></div>`;
-    const main=document.getElementById('main');
-    if(main&&!document.getElementById('sports-quick')){
-      const links=document.createElement('div');links.id='sports-quick';links.className='sports-quick';
-      links.innerHTML='<a href="selections.html" class="'+(PAGE==='selections'?'on':'')+'">Football</a><a href="europe.html" class="'+(PAGE==='europe'?'on':'')+'">Coupes d’Europe</a><a href="hockey.html" class="'+(PAGE==='hockey'?'on':'')+'">Hockey · NHL</a>';
-      main.prepend(links);
-    }
     const n = document.getElementById("bnav");
     if (n) n.innerHTML = `<div class="in">${NAV.map(([id, href, lb]) =>
       `<a href="${href}" class="${PAGE === id ? "on" : ""}">${ICONES[id]}<span>${lb}</span></a>`).join("")}</div>`;
@@ -634,15 +627,15 @@ async function pageEurope(){const data=await chargeJson(ROBOT_BASE+'/europe_jour
     const auj = aujourdHui();
     const duJour = D.sel.filter((s) => (s.jour || "") === auj);
     z.innerHTML = `
-      <div class="card foc ux-today"><div class="hd"><span class="lbl">Aujourd'hui · les conseils</span>
+      <div class="card foc ux-today"><div class="hd"><span class="lbl">Football · Aujourd'hui</span>
         <span class="pill ind">${duJour.length} conseil${duJour.length > 1 ? "s" : ""}</span></div>
-        <h2>Les matchs à regarder aujourd’hui.</h2>
+        <h2>Ton aperçu football.</h2>
         ${duJour.length ? duJour.slice(0, 4).map(ligneSelection).join("")
         : `<p class="small mut" style="margin:14px 0 20px">Aucun conseil éligible pour le moment. Le robot attend des matchs qui remplissent ses critères.</p>`}
-        <a class="btn" href="selections.html" style="margin-top:12px">Voir toutes les sélections</a>
+        <a class="btn" href="selections.html" style="margin-top:12px">Voir les conseils football</a>
       </div>
       <div class="ux-actions" style="grid-column:1/-1">
-        <a class="ux-action" href="selections.html"><b>Explorer les choix ↗</b><span>Combinés, buteurs et autres marchés</span></a>
+        <a class="ux-action" href="selections.html"><b>Explorer le football ↗</b><span>Combinés, buteurs et autres marchés</span></a>
         <a class="ux-action" href="bilan.html"><b>Les résultats ↗</b><span>Le suivi des pronostics publiés</span></a>
         <a class="ux-action" href="abonnement.html"><b>Mon accès ↗</b><span>Statut et activation de l’abonnement</span></a>
       </div>
