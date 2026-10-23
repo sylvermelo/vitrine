@@ -1,0 +1,6 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pronos-foot-vitrine",
+  "pages_build_output_dir": "./docs",
+  "compatibility_date": "2026-10-23"
+}

@@ -89,7 +89,7 @@ const SB = {
   from: (t) => mkChain(t),
   rpc: async () => ({data:{sel:SEL_ROWS,comb:COMB_ROWS}}),
   auth: {
-    getSession: async () => ({ data: { session: { user: { id: "u1", email: "t2290196575755@tel.pronos-foot.bj" } } } }),
+    getSession: async () => ({ data: { session: { user: { id: "u1", email: "t2290100000000@tel.pronos-foot.bj" } } } }),
     onAuthStateChange: () => {}, signOut: async () => {},
   },
 };
@@ -105,6 +105,8 @@ async function run(page) {
     performance: { now: () => 0 },
     fetch: async (url) => {
       const u = String(url);
+      if(u.includes('hockey_jour.json'))return {ok:true,json:async()=>({matchs:[],evaluation:{n:0},suivi:{n:0}})};
+      if(u.includes('europe_jour.json'))return {ok:true,json:async()=>({competitions:[{id:'UCL',nom:'Ligue des champions',nb:1}],matchs:[{div:'UCL',ligue:'Ligue des champions',home:'Club non modélisé',away:'Arsenal',date:auj,heure:'23:59',disponible:false}]})};
       if (u.includes("combines_jour.json")) return { ok: true, json: async () => COMBINES_JOUR };
       if (u.includes("corners_jour.json")) return { ok: true, json: async () => CORNERS };
       if (u.includes("affilee_suivi.json")) return { ok: true, json: async () => AFFILEE };
@@ -180,6 +182,8 @@ async function run(page) {
       ["bilan exotique par saison", r.zbx.includes("Bilan exotique") && r.zbx.includes("buts d'affilée touchés")],
       ["avertissement en bas", r.html.includes("warn")],
     ],
+    hockey: r=>[["modèle NHL explicite",r.html.includes('LE ROBOT HOCKEY')],["plage de probabilité",r.html.includes('name="min"')&&r.html.includes('name="max"')],["marchés 60 min/final distincts",r.html.includes('Vainqueur final')&&r.html.includes('Résultat à 60 min')]],
+    europe: r=>[["Champions visible",r.html.includes('Ligue des champions')],["club inconnu visible",r.html.includes('Club non modélisé')]],
     abonnement: (r) => [
       ["statut actif", r.html.includes("jours restants") && r.html.includes("expire le")],
       ["cumul +30 jours", r.html.includes("Cumuler") && r.html.includes("Ajouter 30 jours")],
@@ -187,7 +191,7 @@ async function run(page) {
       ["avertissement", r.html.includes("warn")],
     ],
   };
-  for (const page of ["accueil", "selections", "exotiques", "bilan", "abonnement"]) {
+  for (const page of ["accueil", "selections", "exotiques", "bilan", "abonnement", "hockey", "europe"]) {
     const r = await run(page);
     const okNav = r.bnav.includes("Exotiques") && r.bnav.includes("Abonnement") && !r.bnav.includes("Séries") && r.hdr.includes("PRONOS");
     const res = (checks[page] || (() => []))(r);

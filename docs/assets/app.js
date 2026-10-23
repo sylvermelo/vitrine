@@ -9,6 +9,7 @@
    ========================================================================== */
 (function () {
   const CFG = window.VITRINE_CONFIG || {};
+  const ROBOT_BASE=(CFG.ROBOT_BASE_URL||"https://sylvermelo.github.io/pronos-foot").replace(/\/$/,"");
   const PAGE = document.body.dataset.page || "";
   let SB = null;
 
@@ -435,6 +436,46 @@
   }
 
   /* ---------------------------------------------- coquille (header + nav) */
+
+/* MULTISPORT_INTEGRATION_BEGIN */
+/* MULTISPORT_SHARED_BEGIN — vue canonique, aucun calcul prédictif côté client. */
+function sportEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function sportPct(p){return Number.isFinite(p)?(100*p).toFixed(1)+' %':'—';}
+const SPORT_CSS=`<style>
+.sport{--sp-bg:#111c26;--sp-bord:#283b48;--sp-txt:#edf3f5;--sp-muted:#a6bbc6;--sp-accent:#6fddba;color:var(--sp-txt);font:14px/1.65 Inter,system-ui,sans-serif;display:grid;gap:20px;min-width:0}.sport *{box-sizing:border-box}.sport h1,.sport h2,.sport h3,.sport p{margin:0}.sport h1{font-size:clamp(26px,4vw,38px);letter-spacing:-1px;text-transform:none;line-height:1.2}.sport h2{font-size:20px;letter-spacing:-.4px}.sport h3{font-size:18px;line-height:1.5;overflow-wrap:anywhere}.sp-eyebrow{color:var(--sp-accent);font-size:11px;letter-spacing:.14em;font-weight:700;margin-bottom:10px}.sp-muted{color:var(--sp-muted);font-size:12px}.sp-head{padding:8px 0}.sp-head p{margin-top:12px;max-width:750px;color:var(--sp-muted)}.sp-alert{border:1px solid #665236;background:rgba(205,160,90,.06);padding:14px 18px;border-radius:14px;color:#e2c895;font-size:12px}.sp-metrics{display:flex;gap:14px;flex-wrap:wrap}.sp-metric{flex:1;min-width:130px;padding:18px 20px;border:1px solid var(--sp-bord);border-radius:16px;background:var(--sp-bg)}.sp-metric b{font-size:23px;display:block}.sp-controls{display:flex;flex-wrap:wrap;gap:12px;padding:18px;border:1px solid var(--sp-bord);border-radius:18px;background:var(--sp-bg);align-items:end}.sp-controls label{display:grid;gap:6px;flex:1;min-width:110px;font:12px Inter,system-ui;color:var(--sp-muted);text-transform:none;letter-spacing:0;margin:0}.sp-controls input,.sp-controls select,.sp-controls button,.sp-tabs button{font:13px Inter,system-ui;min-height:44px;border:1px solid var(--sp-bord);border-radius:10px;background:#0b1520;color:var(--sp-txt);padding:10px 12px;width:100%}.sp-controls button{background:var(--sp-accent);color:#08251b;font-weight:700;width:auto;cursor:pointer}.sp-tabs{display:flex;gap:8px;overflow:auto;padding-bottom:4px}.sp-tabs button{width:auto;white-space:nowrap;cursor:pointer}.sp-tabs button.on{color:var(--sp-accent);border-color:var(--sp-accent);background:rgba(111,221,186,.08)}.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}.sp-card{padding:22px;border:1px solid var(--sp-bord);border-radius:20px;background:linear-gradient(145deg,rgba(111,221,186,.03),transparent),var(--sp-bg);min-width:0;display:flex;flex-direction:column;gap:14px}.sp-card-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.sp-tag{color:var(--sp-accent);font-size:10px;font-weight:700;letter-spacing:.06em;background:rgba(111,221,186,.08);padding:5px 9px;border-radius:7px}.sp-choice{display:flex;justify-content:space-between;gap:15px;align-items:center;border-top:1px solid var(--sp-bord);padding-top:16px}.sp-choice strong{font-size:30px;color:var(--sp-accent);white-space:nowrap;letter-spacing:-1px}.sp-choice span{font-weight:600}.sp-card details,.sp-method{border-top:1px solid var(--sp-bord);padding-top:12px}.sport summary{cursor:pointer;color:var(--sp-muted);font-size:12px;min-height:36px}.sport details p{font-size:12px;color:var(--sp-muted);margin-top:10px;line-height:1.9}.sp-empty{padding:32px 22px;border:1px dashed var(--sp-bord);border-radius:20px;color:var(--sp-muted)}.sp-empty b{display:block;color:var(--sp-txt);margin-bottom:10px}.sport button:focus-visible,.sport select:focus-visible,.sport input:focus-visible,.sport summary:focus-visible{outline:2px solid var(--sp-accent);outline-offset:3px}.sp-bottom{font-size:12px;color:var(--sp-muted);line-height:1.8}.sp-result{padding:14px 0;border-bottom:1px solid var(--sp-bord)}
+@media(max-width:480px){.sp-card{padding:18px}.sp-controls{padding:14px}.sp-controls label{min-width:100px}.sp-choice strong{font-size:27px}.sp-metric{min-width:100px;padding:14px}.sp-metric b{font-size:20px}}
+</style>`;
+function hockeyChoice(m,market){
+ const p=m.prediction;if(!p)return null;
+ if(market==='reg'){const i=p.reg.indexOf(Math.max(...p.reg));return {p:p.reg[i],label:i===0?m.home:i===2?m.away:'Match nul',scope:'Résultat à 60 minutes'};}
+ if(market==='over55'||market==='under55'){const over=market==='over55';return {p:over?p.over['5.5']:1-p.over['5.5'],label:over?'Plus de 5,5 buts':'Moins de 5,5 buts',scope:'Total à 60 minutes'};}
+ return {p:Math.max(p.ml,1-p.ml),label:p.ml>=.5?m.home:m.away,scope:'Vainqueur final · prolongation et tirs au but inclus'};
+}
+function hockeyFilter(data,f){
+ return (data.matchs||[]).map(m=>({m,c:hockeyChoice(m,f.market)})).filter(x=>x.c&&x.c.p*100>=f.min-1e-8&&x.c.p*100<=f.max+1e-8&&(f.day==='tous'||x.m.date===f.day)).sort((a,b)=>(f.sort==='asc'?1:-1)*(a.c.p-b.c.p)||a.m.start.localeCompare(b.m.start));
+}
+function hockeyHTML(data,f){
+ const d=data||{},e=d.evaluation||{},s=d.suivi||{},rows=hockeyFilter(d,f),days=[...new Set((d.matchs||[]).map(m=>m.date))].sort(),esc=sportEsc;
+ const card=({m,c})=>`<article class="sp-card"><div class="sp-card-top"><span class="sp-tag">NHL · ANALYSE</span><span class="sp-muted">${esc(m.date)} · ${esc(m.heure)} (Bénin)</span></div><h3>${esc(m.home)} <span class="sp-muted">face à</span><br>${esc(m.away)}</h3><div class="sp-choice"><div><span>${esc(c.label)}</span><div class="sp-muted">${esc(c.scope)}</div></div><strong>${sportPct(c.p)}</strong></div><p class="sp-muted">Probabilité estimée · cote indisponible</p><details><summary>Pourquoi ce profil ?</summary><p>Le modèle confronte les forces offensives et défensives apprises, l’avantage domicile et les différences de repos. Ses réglages sont choisis sur une validation chronologique.</p><p>À 60 min : domicile ${sportPct(m.prediction.reg[0])} · nul ${sportPct(m.prediction.reg[1])} · extérieur ${sportPct(m.prediction.reg[2])}. Buts attendus : ${m.prediction.lambda_home.toFixed(2)} + ${m.prediction.lambda_away.toFixed(2)}.</p><p>Prévision figée le ${esc(m.frozen_at)}. Gardien titulaire, blessures et composition non intégrés : leur effet ne peut pas être affirmé.</p></details></article>`;
+ return `${SPORT_CSS}<section class="sport"><div class="sp-head"><div class="sp-eyebrow">LE ROBOT HOCKEY · NHL</div><h1>La glace, sous un autre angle.</h1><p>Des profils classés selon leur probabilité estimée. Choisis ton marché et ta plage de pourcentages pour comparer les rencontres.</p></div><div class="sp-alert">Modèle expérimental. Les marchés à 60 minutes excluent prolongation et tirs au but. Le vainqueur final les inclut. Aucun gain garanti.</div>${d.source_incomplete?'<div class="sp-alert">La collecte NHL est partielle ou ancienne. Certaines rencontres peuvent manquer ; consulte la date de la source avant d’utiliser ces analyses.</div>':''}<form class="sp-controls" data-hockey-form><label>Marché<select name="market">${[['ml','Vainqueur final'],['reg','Résultat à 60 min'],['over55','Plus de 5,5 buts · 60 min'],['under55','Moins de 5,5 buts · 60 min']].map(([k,v])=>`<option value="${k}" ${f.market===k?'selected':''}>${v}</option>`).join('')}</select></label><label>De (%)<input name="min" type="number" min="0" max="100" step="1" value="${f.min}"></label><label>À (%)<input name="max" type="number" min="0" max="100" step="1" value="${f.max}"></label><label>Journée<select name="day"><option value="tous">Toutes</option>${days.map(x=>`<option value="${esc(x)}" ${f.day===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label><label>Ordre<select name="sort"><option value="desc" ${f.sort==='desc'?'selected':''}>% décroissants</option><option value="asc" ${f.sort==='asc'?'selected':''}>% croissants</option></select></label><button type="submit">Afficher les profils</button></form><p class="sp-muted">${rows.length} profil(s) · ${f.min} à ${f.max} % · horaires du Bénin · filtre local</p><div class="sp-grid">${rows.slice(0,f.limit||12).map(card).join('')||'<div class="sp-empty"><b>Aucun profil dans cette plage.</b>Essaie un autre marché ou une plage plus large. Le robot peut s’abstenir quand son historique est insuffisant.</div>'}</div>${rows.length>(f.limit||12)?'<div><button class="btn" data-hockey-more>Voir les profils suivants</button></div>':''}<details class="sp-method"><summary>Consulter la méthode et les résultats du test</summary><div class="sp-metrics"><div class="sp-metric"><b>${d.historique_n||0}</b><span class="sp-muted">matchs historiques disponibles</span></div><div class="sp-metric"><b>${e.n||0}</b><span class="sp-muted">matchs du test hors réglage</span></div><div class="sp-metric"><b>${s.n||0}</b><span class="sp-muted">prévisions futures déjà résolues</span></div></div><p>${esc(e.protocole||'Apprentissage en cours ; aucune qualité prédictive encore mesurée.')}</p><p>${e.n?`Test du ${esc(e.du)} au ${esc(e.au)} : ${e.n} rencontres. Réussite du favori final : ${sportPct(e.accuracy)}. Erreur logarithmique : ${Number(e.logloss).toFixed(4)} ; référence simple : ${Number(e.baseline_logloss).toFixed(4)}. Une erreur plus basse est préférable.`:'Pas encore de test exploitable.'}</p><p>${esc(e.note||'Pas de supériorité démontrée face au robot football.')} Ces mesures historiques sont distinctes du suivi des prévisions figées avant les prochains matchs.</p>${(e.calibration||[]).map(b=>`<p>Tranche ${Math.round(b.min*100)}–${Math.round(b.max*100)} % : annoncé ${sportPct(b.annonce)}, observé ${sportPct(b.observe)} (${b.n} matchs).</p>`).join('')}</details><details class="sp-method"><summary>Les derniers résultats du suivi réel (${s.n||0})</summary>${(d.derniers_resultats||[]).map(r=>`<p class="sp-result">${esc(r.home)} / ${esc(r.away)} : ${r.resultat.hg}–${r.resultat.ag} (${esc(r.resultat.period)}). Favori final ${sportPct(Math.max(r.p,1-r.p))} · ${((r.p>=.5)===(r.resultat.hg>r.resultat.ag))?'touché':'manqué'}.</p>`).join('')||'<p>Le suivi commence avec les prévisions publiées avant match. Aucun résultat passé n’est ajouté rétroactivement.</p>'}</details><p class="sp-bottom">Source NHL : ${esc(d.collecte_le||'collecte en cours')}. ${esc(d.note||'Aucune probabilité sans historique exploitable.')}</p></section>`;
+}
+function hockeyBind(root,f,refresh){
+ const form=root.querySelector('[data-hockey-form]');if(form)form.onsubmit=ev=>{ev.preventDefault();const get=n=>form.querySelector('[name="'+n+'"]');const min=Number(get('min').value),max=Number(get('max').value);if(!Number.isFinite(min)||!Number.isFinite(max)||min<0||max>100||min>max){get('min').setCustomValidity('Choisis une plage entre 0 et 100, avec un minimum inférieur au maximum.');get('min').reportValidity();get('min').oninput=()=>get('min').setCustomValidity('');return;}Object.assign(f,{min,max,market:get('market').value,day:get('day').value,sort:get('sort').value,limit:12});refresh();};
+ const more=root.querySelector('[data-hockey-more]');if(more)more.onclick=()=>{f.limit=(f.limit||12)+12;refresh();};
+}
+function europeHTML(data,comp){
+ const d=data||{},esc=sportEsc,rows=(d.matchs||[]).filter(m=>comp==='toutes'||m.div===comp);
+ return `${SPORT_CSS}<section class="sport"><div class="sp-head"><div class="sp-eyebrow">LE RENDEZ-VOUS EUROPÉEN</div><h1>Les grandes soirées d’Europe.</h1><p>Ligue des champions, Europa League et Conference League : toutes les rencontres collectées restent visibles, même si un club ne dispose pas de modèle.</p></div><div class="sp-tabs">${[{id:'toutes',nom:'Toutes'},...(d.competitions||[])].map(c=>`<button type="button" class="${comp===c.id?'on':''}" data-europe="${c.id}">${esc(c.nom)}${c.nb!=null?' · '+c.nb:''}</button>`).join('')}</div><div class="sp-grid">${rows.map(m=>`<article class="sp-card"><div class="sp-card-top"><span class="sp-tag">${esc(m.ligue)}</span><span class="sp-muted">${esc(m.date)} · ${esc(m.heure)} (Bénin)</span></div><h3>${esc(m.home)}<br><span class="sp-muted">face à</span> ${esc(m.away)}</h3><p class="sp-muted">${m.disponible?'Analyse indicative · modèle inter-ligues non calibré':'Calendrier confirmé par la source · modèle insuffisant pour ce match'}</p>${m.disponible?`<details><summary>Voir les probabilités indicatives</summary><p>Domicile ${sportPct(m.p1)} · Nul ${sportPct(m.pX)} · Extérieur ${sportPct(m.p2)}.</p><p>Forces empruntées aux championnats domestiques. Cette approximation ne permet pas de classer ce match comme un conseil validé.</p></details>`:''}</article>`).join('')||'<div class="sp-empty"><b>Aucune prochaine rencontre remontée pour ce filtre.</b>La fenêtre UEFA s’étend jusqu’à 21 jours lorsque la source est disponible. Une liste vide peut signaler une collecte incomplète ; elle ne signifie pas qu’aucun match européen n’est programmé.</div>'}</div><p class="sp-bottom">${esc(d.note||'Calendrier temporairement indisponible. Réessaie après la prochaine mise à jour.')} Dernière collecte UEFA : ${esc(d.collecte_le||'non confirmée')}.</p></section>`;
+}
+function europeBind(root,refresh){root.querySelectorAll('[data-europe]').forEach(b=>b.onclick=()=>refresh(b.dataset.europe));}
+/* MULTISPORT_SHARED_END */
+
+
+const HOCKEY_FILTRE={min:50,max:100,day:'tous',market:'ml',sort:'desc',limit:12};
+async function pageHockey(){const data=await chargeJson(ROBOT_BASE+'/hockey_jour.json');const r=document.getElementById('z-contenu');if(!r)return;const render=()=>{r.innerHTML=hockeyHTML(data,HOCKEY_FILTRE);hockeyBind(r,HOCKEY_FILTRE,render);};render();}
+async function pageEurope(){const data=await chargeJson(ROBOT_BASE+'/europe_jour.json');const r=document.getElementById('z-contenu');if(!r)return;const render=(comp='toutes')=>{r.innerHTML=europeHTML(data,comp);europeBind(r,render);};render();}
+
+/* MULTISPORT_INTEGRATION_END */
   const ICONES = {
     accueil: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1z"/></svg>',
     selections: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
@@ -455,6 +496,12 @@
       <button id="v-compte" class="hbtn" title="Connexion" aria-label="Compte">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
       </button></div>`;
+    const main=document.getElementById('main');
+    if(main&&!document.getElementById('sports-quick')){
+      const links=document.createElement('div');links.id='sports-quick';links.className='sports-quick';
+      links.innerHTML='<a href="selections.html" class="'+(PAGE==='selections'?'on':'')+'">Football</a><a href="europe.html" class="'+(PAGE==='europe'?'on':'')+'">Coupes d’Europe</a><a href="hockey.html" class="'+(PAGE==='hockey'?'on':'')+'">Hockey · NHL</a>';
+      main.prepend(links);
+    }
     const n = document.getElementById("bnav");
     if (n) n.innerHTML = `<div class="in">${NAV.map(([id, href, lb]) =>
       `<a href="${href}" class="${PAGE === id ? "on" : ""}">${ICONES[id]}<span>${lb}</span></a>`).join("")}</div>`;
@@ -508,8 +555,8 @@
      r\u00e9el a d\u00e9marr\u00e9 le 10/09, rien d'ant\u00e9rieur n'est invent\u00e9). */
   async function bilanExotique() {
     const [C, A] = await Promise.all([
-      chargeJson("../pronos-foot/corners_jour.json"),
-      chargeJson("../pronos-foot/affilee_suivi.json")]);
+      chargeJson(ROBOT_BASE+"/corners_jour.json"),
+      chargeJson(ROBOT_BASE+"/affilee_suivi.json")]);
     if (!C && !A) return "";
     const ds = debutSaison();
     const stats = (vue) => {
@@ -800,10 +847,10 @@ function buteursConseilsBind(root,filtre,refresh){
       z.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
       rafraichis();
     }));
-    chargeJson("../pronos-foot/buteurs_jour.json").then((b) => {
+    chargeJson(ROBOT_BASE+"/buteurs_jour.json").then((b) => {
       B=b; if(actif==='buteurs')rafraichis();
     });
-    chargeJson("../pronos-foot/combines_jour.json").then((j) => {
+    chargeJson(ROBOT_BASE+"/combines_jour.json").then((j) => {
       if (!j) return;
       J = j;
       rafraichis();          /* l'onglet ouvert repasse sur la source robot */
@@ -912,8 +959,8 @@ function buteursConseilsBind(root,filtre,refresh){
       <div class="warn">Pourcentages entre 60 et 100 %, en trois couleurs : vert \u2265 85 %,
         ambre 70\u201384 %, rouge 60\u201369. Informations chiffr\u00e9es, jamais un conseil financier :
         probabilit\u00e9s \u2260 certitudes, aucune promesse de gain.</div>`;
-    Promise.all([chargeJson("../pronos-foot/corners_jour.json"),
-                 chargeJson("../pronos-foot/affilee_suivi.json")]).then(([C, A]) => {
+    Promise.all([chargeJson(ROBOT_BASE+"/corners_jour.json"),
+                 chargeJson(ROBOT_BASE+"/affilee_suivi.json")]).then(([C, A]) => {
       function contenu(onglet) { return onglet === "corners" ? renduCorners(C) : renduAffilee(A); }
       const c = z.querySelector("#tab-contenu");
       if (c) c.innerHTML = contenu("corners");
@@ -1546,20 +1593,9 @@ function buteursConseilsBind(root,filtre,refresh){
   /* ---------------------------------------------------------- démarrage */
   (async function () {
     coquille();
-    if (PAGE === "paiement") {
-      const b = document.createElement("div");
-      b.className = "warn";
-      b.innerHTML = "<b>PHASE 4 — PAIEMENTS NON ACTIFS.</b> Écran de prévisualisation design " +
-        "uniquement : aucun encaissement avant validation du cadre légal. Rien ne peut être débité ici.";
-      const m = document.querySelector("main");
-      if (m) m.prepend(b);
-      document.querySelectorAll("button, a").forEach((x) => {
-        if (/payer/i.test(x.textContent || "")) { x.disabled = true; x.style.opacity = ".4"; }
-      });
-      appliquerPrixPaiement();   /* prix/promo dynamiques (table parametres) */
-    }
+    if(PAGE==='paiement'){const btn=document.getElementById('v-compte');if(btn)btn.onclick=()=>location.href='connexion.html';return;}
     const besoinAuth = ["connexion", "inscription"].includes(PAGE);
-    const besoinData = ["accueil", "selections", "exotiques", "bilan"].includes(PAGE);
+    const besoinData = ["accueil", "selections", "exotiques", "bilan", "hockey", "europe"].includes(PAGE);
     if (CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY !== "A_COLLER") {
       SB = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
     }
@@ -1573,9 +1609,14 @@ function buteursConseilsBind(root,filtre,refresh){
       const D = await charge();
       window.__ACC = await accesOk();
       if (!window.__ACC.ok && window.__ACC.raison === "sans-abonnement" &&
-          (PAGE === "selections" || PAGE === "exotiques")) {
+          (["selections","exotiques","hockey","europe"].includes(PAGE))) {
         location.replace("activation.html");
         return;
+      }
+      if(PAGE==='hockey'||PAGE==='europe'){
+        if(window.__ACC.ok){if(PAGE==='hockey')await pageHockey();else await pageEurope();}
+        else verrou(PAGE);
+        etatSession();return;
       }
       if (D) {
         if (PAGE === "accueil") pageAccueil(D);
@@ -1583,7 +1624,7 @@ function buteursConseilsBind(root,filtre,refresh){
         if (PAGE === "exotiques") (window.__ACC.ok ? pageExotiques() : verrou("exotiques"));
         if (PAGE === "bilan") pageBilan(D);
         setTimeout(demarrerLive, 4000);
-      } else if (!window.__ACC.ok && (PAGE === "selections" || PAGE === "exotiques")) {
+      } else if (!window.__ACC.ok && (["selections","exotiques","hockey","europe"].includes(PAGE))) {
         verrou(PAGE);
       }
     }
