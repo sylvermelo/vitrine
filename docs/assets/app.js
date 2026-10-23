@@ -1,5 +1,5 @@
 /* ============================================================================
-   VITRINE PRONOS FOOT — couche données & auth.
+   VITRINE PRONOCLAIR — couche données & auth.
    Lit UNIQUEMENT ce qui existe déjà : tables Supabase `selections` et
    `combines` (écrites chaque heure par le robot), + Supabase Auth pour les
    pages de connexion. Aucune table créée, aucune donnée inventée : si la
@@ -147,6 +147,8 @@
       `<span class="tiny ${s.touche ? "em" : "rd"}" style="font-weight:700">` +
       `${s.touche ? "✓ TOUCHÉE" : "✗ MANQUÉE"} ${s.buts_home ?? ""}-${s.buts_away ?? ""}</span>`;
     const live = s.touche == null ? badgeLive(s.div, s.home, s.away) : "";
+    const q=s.brut&&s.brut.cotation||{},book=q.bookmaker_nom||q.bookmaker||"prix collecté";
+    const fair=s.cote_juste||(s.p>0?1/s.p:null),edge=s.brut&&s.brut.ecart_probabilite;
     return `<article class="ux-selection">
       <div class="l">
         <div class="tiny mut">${esc((s.ligue || s.div || "").toUpperCase())} · ${esc((s.jour || "").slice(8, 10) + "/" + (s.jour || "").slice(5, 7))}${s.heure ? " · " + esc(s.heure) : ""}</div>
@@ -156,7 +158,8 @@
       </div>
       <div class="r">
         <div class="pct em" style="font-family:var(--f-disp);font-weight:800;font-size:17px">${pct(s.p)}</div>
-        <div class="tiny mut">${s.cote_marche ? "cote bookmaker " + f2(s.cote_marche) : "Analyse · cote indisponible"}</div>
+        <div class="tiny mut">Probabilité robot ${pct(s.p)} · cote juste estimée ${fair?f2(fair):"—"}</div>
+        <div class="tiny ${s.cote_marche?"em":"mut"}">${s.cote_marche ? "Cote bookmaker " + f2(s.cote_marche)+" · "+esc(book) : "Cote bookmaker indisponible · analyse seule"}</div>
         ${s.confiance ? `<div class="tiny mut">conf. ${esc(s.confiance)}</div>` : ""}
       </div></article>`;
   }
@@ -181,8 +184,8 @@
         <span class="team" title="${esc(l.away)}">${esc(l.away)}</span></div>
       ${score ? `<div class="case-score">${score}</div>` : ""}
       <div class="case-p"><span class="chip">${esc(l.option)}</span>
-        ${l.p ? `<span class="pct em" style="font-family:var(--f-disp);font-weight:800">${pct(l.p)}</span>` : ""}
-        ${cote ? `<span class="tiny mut">cote bookmaker <b class="ink2 num">${f2(cote)}</b></span>` : ""}</div>
+        ${l.p != null ? `<span class="pct em" style="font-family:var(--f-disp);font-weight:800">${pct(l.p)}</span>` : ""}
+        ${cote ? `<span class="tiny mut">cote bookmaker <b class="ink2 num">${f2(cote)}</b></span>` : `<span class="tiny mut">cote bookmaker indisponible</span>`}</div>
     </div>`;
   }
 
@@ -236,7 +239,7 @@
           return r.data || {sel:[], comb:[]};
         }
         const [sel, comb] = await Promise.all([
-          SB.from("selections").select("jour,div,ligue,heure,home,away,option,p,cote_marche,confiance,touche,buts_home,buts_away").order("jour", { ascending: false }).limit(1000),
+          SB.from("selections").select("jour,div,ligue,heure,home,away,option,p,cote_juste,cote_marche,confiance,touche,buts_home,buts_away,brut").order("jour", { ascending: false }).limit(1000),
           SB.from("combines").select("jour,nom,p_combine,cote,touche,jambes").order("jour", { ascending: false }).limit(1000),
         ]);
         if (sel.error) throw sel.error;
@@ -504,8 +507,8 @@ async function pageEurope(){const data=await chargeJson(ROBOT_BASE+'/europe_jour
   function coquille() {
     const h = document.getElementById("hdr");
     if (h) h.innerHTML = `<div class="in">
-      <div class="brand"><img src="assets/logo.png" alt="Pronos Foot">
-        <div style="min-width:0"><div class="t1">PRONOS<b>FOOT</b></div>
+      <div class="brand"><img src="assets/logo.png" alt="PronoClair">
+        <div style="min-width:0"><div class="t1">PRONO<b>CLAIR</b></div>
         <div class="t2"><span class="dot"></span>Des conseils. Des résultats.</div></div></div>
       <button id="v-compte" class="hbtn" title="Connexion" aria-label="Compte">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
@@ -798,6 +801,43 @@ function buteursConseilsBind(root,filtre,refresh){
   root.querySelectorAll('[data-bc-reset]').forEach(el=>el.addEventListener('click',()=>{Object.assign(filtre,{min:0,max:100,jour:'tous',confirmes:false,limite:12});refresh();}));
 }
 
+  const RESULTATS_FILTRE={sport:'tous',marche:'tous',etat:'tous',recherche:'',min:0,max:100,ordre:'date'};
+  function donneesResultats(D,H,B){
+    const rows=[];
+    for(const s of D.sel||[]){
+      const b=s.brut||{},q=b.cotation||{};
+      const o=String(s.option||'');let m=o==='1'||o==='X'||o==='2'?'Résultat du match':o.startsWith('over ')||o.startsWith('under ')?'Total de buts':o.startsWith('double chance')?'Double chance':o.includes('marquent')?'Les deux équipes marquent':'Autre marché';
+      rows.push({sport:'Football',date:s.jour,home:s.home,away:s.away,ligue:s.ligue||s.div,marche:m,prediction:o,p:s.p,cote_juste:s.cote_juste||b.cote_juste,cote_marche:s.cote_marche,bookmaker:q.bookmaker_nom||q.bookmaker,edge:b.ecart_probabilite,cote_horodatage:q.last_update,score:s.buts_home!=null&&s.buts_away!=null?s.buts_home+'–'+s.buts_away:null,touche:s.touche,source:'Conseil archivé avant match'});
+    }
+    for(const c of D.comb||[]){
+      rows.push({sport:'Football',date:c.jour,marche:'Combiné',prediction:String(c.nom||'coupon').replace(/_/g,' ').toUpperCase(),p:c.p_combine,cote_juste:null,cote_marche:c.cote,score:null,touche:c.touche,source:'Coupon archivé avant match',details:(c.jambes||[]).length});
+    }
+    if(B)for(const x of B.resultats||[])rows.push(x);
+    if(H)for(const x of (H.resultats||[]).concat((H.joueurs||{}).resultats||[]))rows.push(x);
+    return rows.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  }
+  function resultatCard(x){
+    const pending=x.touche==null&&!x.annule,player=String(x.source||'').startsWith('Prévision individuelle');
+    const status=x.annule?'Annulé · non-participant':pending?'En attente':player?(x.touche?'Événement réalisé':'Événement non réalisé'):(x.touche?'Réussi':'Manqué');
+    const state=pending||x.annule?'mut':x.touche?'em':'rd',fair=x.source==='Coupon archivé avant match'?null:(x.cote_juste||(x.p>0?1/x.p:null));
+    const title=x.home&&x.away?esc(x.home)+' <span class="mut">vs</span> '+esc(x.away):esc(x.prediction||x.marche);
+    return '<article class="card" style="border:1px solid rgba(150,170,195,.19);border-radius:16px;padding:16px;background:linear-gradient(145deg,rgba(111,226,190,.06),transparent 65%),#111923"><div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#a2afc1"><span>'+esc(x.sport||'Sport')+' · '+esc(x.date||'')+'</span><b class="'+state+'">'+status+'</b></div><h3 style="font-size:16px;margin:10px 0 5px">'+title+'</h3><div class="tiny mut">'+esc(x.ligue||x.equipe||'')+' · '+esc(x.marche||'')+'</div><p style="margin:10px 0"><span class="chip">'+esc(x.prediction||x.marche||'Prédiction')+'</span>'+(x.score?' <span class="tiny ink2">'+esc(x.score)+'</span>':'')+'</p><div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:7px"><div class="kpi"><div class="v num">'+(x.p!=null?pct(x.p):'—')+'</div><div class="d">probabilité robot</div></div><div class="kpi"><div class="v num cy">'+(fair?f2(fair):'—')+'</div><div class="d">cote juste théorique</div></div><div class="kpi"><div class="v num '+(x.cote_marche?'em':'mut')+'">'+(x.cote_marche?f2(x.cote_marche):'—')+'</div><div class="d">'+(x.cote_marche?'bookmaker · '+esc(x.bookmaker||'prix réel')+(x.cote_horodatage?' · '+esc(x.cote_horodatage):''):'cote bookmaker indisponible')+'</div></div></div>'+(x.edge!=null?'<div class="tiny mut" style="margin-top:9px">Écart de probabilité vs marché sans marge : <b class="'+(x.edge>0?'em':x.edge<0?'rd':'mut')+'">'+(x.edge>0?'+':'')+pct(x.edge)+'</b></div>':'')+'</article>';
+  }
+  function resultatListe(D,H,B){
+    const rows=donneesResultats(D,H,B).filter(x=>(RESULTATS_FILTRE.sport==='tous'||x.sport===RESULTATS_FILTRE.sport)&&(RESULTATS_FILTRE.marche==='tous'||x.marche===RESULTATS_FILTRE.marche)&&(RESULTATS_FILTRE.etat==='tous'||(RESULTATS_FILTRE.etat==='attente'?x.touche==null&&!x.annule:RESULTATS_FILTRE.etat==='annule'?x.annule===true:RESULTATS_FILTRE.etat==='touche'?x.touche===true:x.touche===false))&&(x.p==null||(x.p*100>=Number(RESULTATS_FILTRE.min)&&x.p*100<=Number(RESULTATS_FILTRE.max)))&&(!RESULTATS_FILTRE.recherche||[x.home,x.away,x.joueur,x.ligue,x.prediction].join(' ').toLowerCase().includes(RESULTATS_FILTRE.recherche.toLowerCase()))).sort((a,b)=>RESULTATS_FILTRE.ordre==='date'?String(b.date||'').localeCompare(String(a.date||'')):(RESULTATS_FILTRE.ordre==='asc'?1:-1)*((a.p||0)-(b.p||0)));
+    if(!rows.length)return '<div class="card"><b>Aucune prédiction dans cette catégorie.</b><div class="small mut" style="margin-top:7px">Essaie un autre sport, marché ou état.</div></div>';
+    const groups=new Map();for(const x of rows){const k=(x.sport||'Sport')+' · '+(x.marche||'Autre marché');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x);}
+    return '<div class="small mut" style="margin:14px 2px">'+rows.length+' prédiction(s) affichée(s)</div>'+[...groups].map(([k,xs])=>'<section style="margin:18px 0"><div class="hd"><span class="lbl">'+esc(k)+'</span><span class="pill mu">'+xs.length+'</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px">'+xs.map(resultatCard).join('')+'</div></section>').join('');
+  }
+  function resultatPage(D,H,B){
+    const rows=donneesResultats(D,H,B),sports=[...new Set(rows.map(x=>x.sport).filter(Boolean))].sort(),marches=[...new Set(rows.map(x=>x.marche).filter(Boolean))].sort();
+    const resolved=rows.filter(x=>x.touche!=null),annulees=rows.filter(x=>x.annule).length,pending=rows.length-resolved.length-annulees;
+    return '<section class="bc"><div class="bc-hero"><div class="bc-kicker">ARCHIVE DU ROBOT</div><h2>Résultats des prédictions</h2><p>Retrouve les pronostics d’équipe, les buteurs football et les profils NHL, classés par marché. Les prix bookmaker n’apparaissent que s’ils ont été réellement enregistrés.</p></div><div class="kpis"><div class="kpi"><div class="v num">'+rows.length+'</div><div class="d">prédictions archivées</div></div><div class="kpi"><div class="v num">'+resolved.length+'</div><div class="d">résolues</div></div><div class="kpi"><div class="v num">'+pending+'</div><div class="d">en attente</div></div><div class="kpi"><div class="v num">'+annulees+'</div><div class="d">annulées</div></div></div><div class="bc-controls"><div class="bc-controlrow"><label>Sport<select data-rs="sport"><option value="tous">Tous les sports</option>'+sports.map(x=>'<option value="'+esc(x)+'" '+(RESULTATS_FILTRE.sport===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><label>Marché<select data-rs="marche"><option value="tous">Tous les marchés</option>'+marches.map(x=>'<option value="'+esc(x)+'" '+(RESULTATS_FILTRE.marche===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><label>État<select data-rs="etat"><option value="tous">Tous</option><option value="touche">Réussi / réalisé</option><option value="manque">Manqué / non réalisé</option><option value="attente">En attente</option><option value="annule">Annulé</option></select></label><label>De (%)<input data-rs="min" type="number" min="0" max="100" value="0"></label><label>À (%)<input data-rs="max" type="number" min="0" max="100" value="100"></label><label>Classer<select data-rs="ordre"><option value="date">Plus récent</option><option value="desc">Probabilité décroissante</option><option value="asc">Probabilité croissante</option></select></label><label>Recherche<input data-rs="recherche" placeholder="Équipe ou joueur"></label></div></div><div id="resultats-liste">'+resultatListe(D,H,B)+'</div><p class="bc-foot">Pour les pronostics simples, la cote juste est une estimation théorique du robot (1/probabilité), pas un prix disponible chez un bookmaker. Les combinés affichent seulement leur prix réel lorsqu’il existe. Les 500 résultats buteurs football les plus récents sont inclus; les profils non participants sont signalés comme annulés. Le taux de réussite ne prouve pas la rentabilité d’un pari.</p></section>';
+  }
+  function bindResultats(root,D,getH,getB){
+    const bind=()=>{const form=root.querySelectorAll('[data-rs]');form.forEach(el=>el.addEventListener(el.tagName==='INPUT'?'input':'change',()=>{RESULTATS_FILTRE[el.dataset.rs]=el.value;const out=root.querySelector('#resultats-liste');if(out)out.innerHTML=resultatListe(D,getH(),getB());}));};
+    bind();
+  }
   const BUTEURS_FILTRE={min:20,max:100,jour:'auj',confirmes:false,limite:12};
   function renduButeurs(B){
     if(!B)return '<div class="card"><div class="small mut">Le bot prépare les profils buteurs…</div></div>';
@@ -805,14 +845,18 @@ function buteursConseilsBind(root,filtre,refresh){
   }
 
   function pageSelections(D) {
+    Object.assign(RESULTATS_FILTRE,{sport:'tous',marche:'tous',etat:'tous',recherche:'',min:0,max:100,ordre:'date'});
     const z = document.getElementById("z-contenu");
     if (!z) return;
     const auj = aujourdHui();
-    let J = null, B = null, actif = "jour";
+    let J = null, B = null, H = null, actif = "jour";
+    const plage={min:0,max:100,ordre:"desc"};
     function renduJour() {
-      const duJour = D.sel.filter((s) => (s.jour || "") === auj);
-      const aVenir = D.sel.filter((s) => (s.jour || "") > auj && s.touche == null);
-      return `
+      const trie=(arr)=>arr.filter(s=>s.p==null||(s.p*100>=plage.min&&s.p*100<=plage.max))
+        .sort((a,b)=>(plage.ordre==="asc"?1:-1)*((a.p||0)-(b.p||0)));
+      const duJour = trie(D.sel.filter((s) => (s.jour || "") === auj));
+      const aVenir = trie(D.sel.filter((s) => (s.jour || "") > auj && s.touche == null));
+      return `<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end"><label>De (%)<input data-sel-filter="min" type="number" min="0" max="100" value="${plage.min}"></label><label>À (%)<input data-sel-filter="max" type="number" min="0" max="100" value="${plage.max}"></label><label>Ordre<select data-sel-filter="ordre"><option value="desc" ${plage.ordre==="desc"?"selected":""}>Probabilité décroissante</option><option value="asc" ${plage.ordre==="asc"?"selected":""}>Probabilité croissante</option></select></label><button type="button" class="btn ghost" data-sel-apply>Appliquer</button></div>
         <div class="card hi"><div class="hd"><span class="lbl">S\u00e9lections du jour</span>
           <span class="pill ind">${duJour.length}</span></div>
           ${duJour.length ? duJour.map(ligneSelection).join("")
@@ -840,6 +884,7 @@ function buteursConseilsBind(root,filtre,refresh){
     }
     function contenu(onglet) {
       if (onglet === "buteurs") return renduButeurs(B);
+      if (onglet === "resultats") return resultatPage(D,H,B);
       if (onglet === "safe") return renduSafe();
       if (onglet === "combine") return renduCombine(D, J);
       return renduJour();
@@ -849,10 +894,15 @@ function buteursConseilsBind(root,filtre,refresh){
       if (c) c.innerHTML = contenu(actif);
       if (actif === "combine") bindSubCombine(z, D, J);
       if (actif === "buteurs") buteursConseilsBind(c,BUTEURS_FILTRE,rafraichis);
+      if (actif === "resultats") bindResultats(c,D,()=>H,()=>B);
+      if (actif === "jour") {
+        c.querySelectorAll("[data-sel-filter]").forEach(el=>el.addEventListener("change",()=>{plage[el.dataset.selFilter]=el.value;}));
+        c.querySelectorAll("[data-sel-apply]").forEach(el=>el.addEventListener("click",rafraichis));
+      }
     }
-    z.innerHTML = tabsHtml("jour", [["jour", "S\u00e9lection du jour"], ["safe", "SAFE"], ["combine", "Combin\u00e9"], ["buteurs", "Buteurs"]])
+    z.innerHTML = tabsHtml("jour", [["jour", "Conseils"], ["safe", "SAFE"], ["combine", "Combin\u00e9"], ["buteurs", "Buteurs"], ["resultats", "Résultats"]])
       + `<div id="tab-contenu">${contenu("jour")}</div>
-      <details class="ux-method"><summary>Comprendre les sélections et leurs limites</summary><div class="warn">Combin\u00e9s publi\u00e9s par le robot (m\u00eame source que le site pronos-foot,
+      <details class="ux-method"><summary>Comprendre les sélections et leurs limites</summary><div class="warn">Combin\u00e9s publi\u00e9s par le robot PronoClair,
         mis \u00e0 jour chaque heure). Cotes affich\u00e9es = prix bookmaker réellement reçus ; sans prix exact, analyse seule. Probabilit\u00e9s \u2260 certitudes : aucune promesse de gain. Divisions
         instables exclues sous 85 % (conseils) et 90 % (SAFE/combin\u00e9s), coupes jamais dans les
         s\u00e9lections suivies.</div></details>`;
@@ -862,8 +912,9 @@ function buteursConseilsBind(root,filtre,refresh){
       rafraichis();
     }));
     chargeJson(ROBOT_BASE+"/buteurs_jour.json").then((b) => {
-      B=b; if(actif==='buteurs')rafraichis();
+      B=b; if(actif==='buteurs'||actif==='resultats')rafraichis();
     });
+    chargeJson(ROBOT_BASE+"/hockey_jour.json").then((h) => { H=h; if(actif==='resultats')rafraichis(); });
     chargeJson(ROBOT_BASE+"/combines_jour.json").then((j) => {
       if (!j) return;
       J = j;

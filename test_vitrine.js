@@ -105,7 +105,8 @@ async function run(page) {
     performance: { now: () => 0 },
     fetch: async (url) => {
       const u = String(url);
-      if(u.includes('hockey_jour.json'))return {ok:true,json:async()=>({matchs:[],evaluation:{n:0},suivi:{n:0}})};
+      if(u.includes('buteurs_jour.json'))return {ok:true,json:async()=>({resultats:[{sport:'Football',date:hier,home:'Lyon',away:'Nice',ligue:'Ligue 1',joueur:'Alex Test',equipe:'Lyon',marche:'Buteur · marque un but',prediction:'Alex Test marque au moins un but',p:.44,cote_juste:2.27,cote_marche:2.5,bookmaker:'Bookmaker test',touche:true,source:'Prévision individuelle football'}]})};
+      if(u.includes('hockey_jour.json'))return {ok:true,json:async()=>({matchs:[],evaluation:{n:0},suivi:{n:0},resultats:[{sport:'Hockey',date:hier,home:'Montreal',away:'Ottawa',marche:'Vainqueur final',prediction:'Montreal gagne',p:.55,touche:false,source:'Prévision hockey'}]})};
       if(u.includes('europe_jour.json'))return {ok:true,json:async()=>({competitions:[{id:'UCL',nom:'Ligue des champions',nb:1}],matchs:[{div:'UCL',ligue:'Ligue des champions',home:'Club non modélisé',away:'Arsenal',date:auj,heure:'23:59',disponible:false}]})};
       if (u.includes("combines_jour.json")) return { ok: true, json: async () => COMBINES_JOUR };
       if (u.includes("corners_jour.json")) return { ok: true, json: async () => CORNERS };
@@ -152,7 +153,10 @@ async function run(page) {
       ["avertissement en bas", r.html.includes("jamais un conseil financier") || r.html.includes("warn")],
     ],
     selections: (r) => [
-      ["3 onglets", r.html.includes('data-tab="jour"') && r.html.includes('data-tab="safe"') && r.html.includes('data-tab="combine"')],
+      ["5 onglets avec résultats", r.html.includes('data-tab="jour"') && r.html.includes('data-tab="safe"') && r.html.includes('data-tab="combine"') && r.html.includes('data-tab="buteurs"') && r.html.includes('data-tab="resultats"')],
+      ["résultats classés et filtrables", (r.snaps.resultats||"").includes("Résultats des prédictions") && (r.snaps.resultats||"").includes("De (%)")],
+      ["résultats buteurs archivés dans le bon marché", (r.snaps.resultats||"").includes("Alex Test") && (r.snaps.resultats||"").includes("Buteur · marque un but")],
+      ["résultats hockey intégrés", (r.snaps.resultats||"").includes("Montreal") && (r.snaps.resultats||"").includes("Hockey · Vainqueur final")],
       ["jour : Arsenal", r.html.includes("Arsenal")],
       ["onglet SAFE : safe du jour (source robot)", (r.snaps.safe || "").includes("SAFE DU JOUR")],
       ["onglet SAFE : pas de cote calculée", !(r.snaps.safe || "").includes("cote juste") && !(r.snaps.safe || "").includes("1.46")],
@@ -193,7 +197,7 @@ async function run(page) {
   };
   for (const page of ["accueil", "selections", "exotiques", "bilan", "abonnement", "hockey", "europe"]) {
     const r = await run(page);
-    const okNav = r.bnav.includes("Exotiques") && r.bnav.includes("Abonnement") && !r.bnav.includes("Séries") && r.hdr.includes("PRONOS");
+    const okNav = r.bnav.includes("Exotiques") && r.bnav.includes("Abonnement") && !r.bnav.includes("Séries") && r.hdr.includes("PRONO") && r.hdr.includes("CLAIR");
     const res = (checks[page] || (() => []))(r);
     const bad = r.errs.length || !okNav || res.filter(([, ok]) => !ok).length;
     if (bad) ko++;
