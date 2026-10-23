@@ -48,7 +48,7 @@ function element(id) {
     id, _html: "", style: {}, dataset: {}, title: "", textContent: "",
     className: "", children: [],
     set innerHTML(v) { this._html = v; }, get innerHTML() { return this._html; },
-    set cssText(v) {},
+    set cssText(v) {}, setAttribute: () => {},
     querySelector: (s) => (REG[s] = REG[s] || element(s)),
     querySelectorAll: (sel) => {
       if (sel !== ".tab") return [];

@@ -4,8 +4,7 @@
    `combines` (écrites chaque heure par le robot), + Supabase Auth pour les
    pages de connexion. Aucune table créée, aucune donnée inventée : si la
    base est vide ou injoignable, l'écran le dit au lieu d'afficher du faux.
-   Le design (classes Tailwind Stitch) est conservé : on remplace seulement
-   le CONTENU des zones mock par du contenu réel, mêmes classes.
+   Présentation partagée PronoClair Studio ; données et droits conservés.
    ========================================================================== */
 (function () {
   const CFG = window.VITRINE_CONFIG || {};
@@ -506,12 +505,14 @@ async function pageEurope(){const data=await chargeJson(ROBOT_BASE+'/europe_jour
   function coquille() {
     const h = document.getElementById("hdr");
     if (h) h.innerHTML = `<div class="in">
-      <div class="brand"><img src="assets/logo.png" alt="PronoClair">
+      <a class="brand" href="index.html" aria-label="PronoClair — accueil"><img src="assets/pronoclair.svg?v=20261023-studio" alt="" width="37" height="37">
         <div style="min-width:0"><div class="t1">PRONO<b>CLAIR</b></div>
-        <div class="t2"><span class="dot"></span>Des conseils. Des résultats.</div></div></div>
-      <button id="v-compte" class="hbtn" title="Connexion" aria-label="Compte">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+        <div class="t2">Le sport en perspective.</div></div></a><nav class="header-links" aria-label="Navigation principale"><a href="index.html" ${PAGE === "accueil" ? 'aria-current="page"' : ""}>Accueil</a><a href="bilan.html" ${PAGE === "bilan" ? 'aria-current="page"' : ""}>Bilan</a><a href="abonnement.html" ${PAGE === "abonnement" ? 'aria-current="page"' : ""}>Abonnement</a></nav>
+      <button id="v-compte" class="hbtn" title="Connexion" aria-label="Connexion">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span id="account-label">Connexion</span>
       </button></div>`;
+    const account = document.getElementById("v-compte");
+    if(account) account.onclick = () => location.href = "connexion.html";
     const n = document.getElementById("bnav");
     if (n) n.innerHTML = `<div class="in">${NAV.map(([id, href, lb]) =>
       `<a href="${href}" class="${PAGE === id ? "on" : ""}">${ICONES[id]}<span>${lb}</span></a>`).join("")}</div>`;
@@ -1206,16 +1207,26 @@ function buteursConseilsBind(root,filtre,refresh){
     if (document.getElementById("v-pays-modal")) return;
     const ov = document.createElement("div");
     ov.id = "v-pays-modal";
+    ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-labelledby", "country-dialog-title");
     ov.className = "fixed inset-0 z-[90] bg-black/70 flex items-end sm:items-center justify-center";
     ov.innerHTML = `<div class="w-full sm:max-w-sm bg-surface-container-high rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col p-3 gap-2 shadow-2xl">
-        <div class="font-label-micro text-label-micro uppercase tracking-widest text-outline px-1">Choisir le pays (indicatif)</div>
+        <div class="country-dialog-head"><span id="country-dialog-title">Choisir le pays</span><button id="country-close" type="button" aria-label="Fermer">×</button></div>
         <input id="v-pays-q" type="text" placeholder="Rechercher un pays ou un indicatif…" autocomplete="off"
           class="w-full bg-surface-container-lowest rounded-lg px-3 py-2.5 font-body-sm text-body-sm text-on-surface outline-none">
         <div id="v-pays-liste" class="overflow-y-auto flex flex-col gap-0.5"></div></div>`;
     document.body.appendChild(ov);
     const liste = ov.querySelector("#v-pays-liste");
     const q = ov.querySelector("#v-pays-q");
-    const ferme = () => ov.remove();
+    const previous = document.activeElement;
+    const ferme = () => { ov.remove(); if(previous && previous.focus) previous.focus(); };
+    ov.querySelector("#country-close").onclick = ferme;
+    ov.addEventListener("keydown", e => {
+      if(e.key === "Escape") ferme();
+      if(e.key === "Tab") { const els=[...ov.querySelectorAll("button,input")]; const first=els[0],last=els[els.length-1];
+        if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
+        else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
+      }
+    });
     const dessine = (filtre) => {
       const f = (filtre || "").trim().toLowerCase();
       const fd = f.replace(/\D/g, "");
@@ -1246,7 +1257,7 @@ function buteursConseilsBind(root,filtre,refresh){
       if (btn) btn.innerHTML =
         `<span class="text-base leading-none">${paysSel[0]}</span>` +
         `<span class="font-metric-sm text-metric-sm text-on-surface font-semibold">+${paysSel[2]}</span>` +
-        `<span class="material-symbols-outlined text-[14px] text-outline">expand_more</span>`;
+        `<span aria-hidden="true">▾</span>`;
       const hint = document.getElementById("phone-hint");
       if (hint) hint.textContent = paysSel[1] + " (+" + paysSel[2] + ") — numéro à " +
         (paysSel[3] === paysSel[4] ? paysSel[3] + " chiffres" : paysSel[3] + " à " + paysSel[4] + " chiffres") +
@@ -1390,11 +1401,13 @@ function buteursConseilsBind(root,filtre,refresh){
       const panT = document.getElementById("panel-phone");
       const emailIn = document.getElementById("email-input");
       const phoneIn = document.getElementById("phone-input");
-      const CLS_ON = "py-2 text-center rounded font-headline-sm text-metric-sm bg-surface-container-high text-primary shadow-xs transition-all";
-      const CLS_OFF = "py-2 text-center rounded font-headline-sm text-metric-sm text-on-surface-variant hover:text-on-surface transition-all";
+      const CLS_ON = "auth-tab on";
+      const CLS_OFF = "auth-tab";
       const majOnglets = () => {
         tabE.className = actif === "email" ? CLS_ON : CLS_OFF;
         tabT.className = actif === "tel" ? CLS_ON : CLS_OFF;
+        tabE.setAttribute("aria-selected", String(actif === "email"));
+        tabT.setAttribute("aria-selected", String(actif === "tel"));
         panE.style.display = actif === "email" ? "flex" : "none";
         panT.style.display = actif === "tel" ? "flex" : "none";
       };
@@ -1422,16 +1435,18 @@ function buteursConseilsBind(root,filtre,refresh){
       initPays();   /* page connexion : bouton pays sur le préfixe */
     }
     const mdp = document.querySelector("main input[type=password]");
-    const bouton = [...document.querySelectorAll("main button, main a")]
+    const bouton = document.getElementById("v-auth-submit") || [...document.querySelectorAll("main button, main a")]
       .find((b) => /Déverrouiller|Recevoir le code|Créer mon compte/i.test(b.textContent || ""));
     const msg = document.createElement("div");
-    msg.className = "mt-gutter-sm font-body-sm text-body-sm text-primary px-gutter-base";
+    msg.className = "auth-message";
+    msg.setAttribute("role", "status");
+    msg.setAttribute("aria-live", "polite");
     if (bouton) bouton.parentElement.appendChild(msg);
     /* Code promo (parrainage vendeur) : case à cocher + champ. */
     let promoWrap = null;
     if (bouton) {
       promoWrap = document.createElement("div");
-      promoWrap.className = "mt-gutter-base px-gutter-base flex flex-col gap-gutter-sm";
+      promoWrap.className = "auth-promo";
       promoWrap.innerHTML = `<label class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant" style="cursor:pointer">
           <input id="v-promo-ok" type="checkbox"> J'ai un code promo</label>
         <input id="v-promo" type="text" placeholder="ex. PF-7K9QM" autocomplete="off"
@@ -1482,8 +1497,9 @@ function buteursConseilsBind(root,filtre,refresh){
       .find((b) => /Google/i.test(b.textContent || ""));
     if (google) google.onclick = async () => {
       try {
-        await SB.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname.replace(/[^/]*$/, "") + "index.html" } });
-      } catch (e) { msg.textContent = "Google : à activer côté Supabase (Auth → Providers)."; }
+        const oauth = await SB.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname.replace(/[^/]*$/, "") + "index.html" } });
+        if(oauth.error) throw oauth.error;
+      } catch (e) { msg.textContent = "La connexion Google est indisponible pour le moment. Utilise ton téléphone ou ton e-mail."; }
     };
     const main_ = document.querySelector("main");
     if (main_ && !document.getElementById("v-legaux")) {
@@ -1495,12 +1511,12 @@ function buteursConseilsBind(root,filtre,refresh){
       main_.appendChild(liens);
     }
     if (mode === "connexion" && bouton) {
-      const wrap = document.createElement("div");
-      wrap.className = "mt-gutter-base flex flex-col gap-gutter-sm px-gutter-base";
-      wrap.innerHTML = `<div class="font-label-micro text-label-micro uppercase tracking-widest text-outline">Code opérateur</div>
+      const wrap = document.createElement("details");
+      wrap.className = "operator-access";
+      wrap.innerHTML = `<summary>Accès opérateur</summary><label for="v-code">Code opérateur</label>
         <input id="v-code" type="password" placeholder="••••••••" autocomplete="off"
           class="w-full bg-surface-container-low rounded-lg px-gutter-base py-2.5 font-metric-xs text-metric-xs text-on-surface outline-none">
-        <button id="v-code-btn" class="bg-surface-container-high text-on-surface rounded-lg py-2.5 font-headline-sm text-headline-sm">Entrer avec le code</button>`;
+        <button id="v-code-btn" type="button" class="bg-surface-container-high text-on-surface rounded-lg py-2.5 font-headline-sm text-headline-sm">Entrer avec le code</button>`;
       bouton.parentElement.appendChild(wrap);
       wrap.querySelector("#v-code-btn").onclick = async () => {
         msg.textContent = "…";
@@ -1518,9 +1534,17 @@ function buteursConseilsBind(root,filtre,refresh){
       msg.textContent = "Formulaire incomplet — signale-le, je corrige.";
       return;
     }
-    bouton.onclick = async (e) => {
+    const toggle = document.getElementById("toggle-password");
+    if(toggle) toggle.onclick = () => {
+      const show = mdp.type === "password"; mdp.type = show ? "text" : "password";
+      toggle.textContent = show ? "Masquer" : "Voir";
+      toggle.setAttribute("aria-pressed", String(show));
+      toggle.setAttribute("aria-label", show ? "Masquer le mot de passe" : "Afficher le mot de passe");
+    };
+    const submitAuth = async (e) => {
       e.preventDefault();
-      msg.textContent = "…";
+      if(bouton.disabled) return;
+      msg.textContent = "";
       const coche = document.getElementById("terms-checkbox") ||
         document.querySelector("main input[type=checkbox]:not(#v-promo-ok)");
       if (mode === "inscription" && coche && !coche.checked) {
@@ -1532,6 +1556,12 @@ function buteursConseilsBind(root,filtre,refresh){
         msg.textContent = idf.msg || "Identifiant invalide : adresse e-mail ou numéro de téléphone attendu.";
         return;
       }
+      if (!mdp.value || (mode === "inscription" && mdp.value.length < 6)) {
+        msg.textContent = mode === "inscription" ? "Choisis un mot de passe de 6 caractères minimum." : "Saisis ton mot de passe.";
+        return;
+      }
+      bouton.disabled = true; bouton.setAttribute("aria-busy", "true");
+      msg.textContent = "Connexion en cours…";
       try {
         if (mode === "connexion") {
           const r = await SB.auth.signInWithPassword({ email: idf.email, password: mdp.value });
@@ -1569,7 +1599,10 @@ function buteursConseilsBind(root,filtre,refresh){
           }
         }
       } catch (err) { msg.textContent = msgErreur(err); }
+      finally { bouton.disabled = false; bouton.removeAttribute("aria-busy"); }
     };
+    const form = document.getElementById("auth-form");
+    if (form) form.onsubmit = submitAuth; else bouton.onclick = submitAuth;
   }
 
   function etatSession() {
@@ -1607,13 +1640,15 @@ function buteursConseilsBind(root,filtre,refresh){
       const sess = data && data.session;
       if (!sess) {
         btn.style.outline = "";
-        btn.title = "Connexion";
+        btn.title = "Connexion"; btn.setAttribute("aria-label", "Connexion");
+        const label = document.getElementById("account-label"); if(label) label.textContent = "Connexion";
         btn.onclick = () => location.href = "connexion.html";
         menu.style.display = "none";
         return;
       }
       btn.style.outline = "2px solid #4ae176";
-      btn.title = "Mon compte";
+      btn.title = "Mon compte"; btn.setAttribute("aria-label", "Mon compte");
+      const label = document.getElementById("account-label"); if(label) label.textContent = "Mon compte";
       const u = sess.user;
       let abo = null;
       try {
@@ -1654,11 +1689,11 @@ function buteursConseilsBind(root,filtre,refresh){
     if(PAGE==='paiement'){const btn=document.getElementById('v-compte');if(btn)btn.onclick=()=>location.href='connexion.html';return;}
     const besoinAuth = ["connexion", "inscription"].includes(PAGE);
     const besoinData = ["accueil", "selections", "exotiques", "bilan", "hockey", "europe"].includes(PAGE);
-    if (CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY !== "A_COLLER") {
+    if (CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY !== "A_COLLER" && window.supabase) {
       SB = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
     }
     if (besoinAuth) {
-      if (!SB) banniere("Connexion indisponible : clé publique Supabase absente de assets/config.js.");
+      if (!SB) banniere("Connexion momentanément indisponible. Vérifie ton réseau, puis actualise la page.");
       else pageAuth(PAGE);
     }
     if (besoinAuth || besoinData || PAGE === "abonnement") await sessionPret();

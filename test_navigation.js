@@ -3,11 +3,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const read = name => fs.readFileSync(`docs/${name}.html`, 'utf8');
 const home = read('index');
-const hub = home.match(/<section class="sport-hub"[\s\S]*?<\/section>/)[0];
+const hub = home.match(/<div class="sport-hub"[\s\S]*?<\/section>/)[0];
 assert.deepEqual([...hub.matchAll(/href="([^"]+)"/g)].map(m=>m[1]), ['selections.html','hockey.html']);
-assert.match(hub, /class="sport-soon" aria-disabled="true"/);
-assert.match(hub, /Basket/);
-assert.match(hub, /À venir/);
+assert.match(home, /class="basket-soon" aria-disabled="true"/);
+assert.match(home, /Basket/);
+assert.match(home, /À venir/);
 assert(!home.includes('href="europe.html"'));
 for (const name of ['selections','europe','exotiques']) {
   const html=read(name);

@@ -1,44 +1,36 @@
-/* Service worker vitrine : coquille en cache (hors-ligne), pages ET scripts
-   en network-first (jamais de vieille version servie quand le réseau existe).
-   addAll tolérant : un fichier manquant n'empêche plus l'installation. */
-const CACHE = "vitrine-2026-10-23-navigation-sports";
+/* Versioned shell. Never cache account data or responses from external APIs. */
+const CACHE = 'vitrine-2026-10-23-studio';
+const V = '20261023-studio';
 const COQUILLE = [
-  "./", "./index.html", "./hockey.html", "./europe.html", "./selections.html", "./exotiques.html", "./abonnement.html", "./corners.html", "./series.html", "./bilan.html",
-  "./acces.html", "./connexion.html", "./inscription.html", "./paiement.html",
-  "./confidentialite.html", "./conditions.html", "./activation.html",
-  "./assets/design.css", "./assets/experience.css", "./assets/app.js", "./assets/config.js", "./assets/manifest.webmanifest",
-  "./assets/icons-192.png", "./assets/icons-512.png", "./assets/logo.png",
+  './','./index.html','./connexion.html','./inscription.html','./selections.html',
+  './hockey.html','./europe.html','./exotiques.html','./bilan.html','./abonnement.html',
+  './acces.html','./activation.html','./paiement.html','./conditions.html','./confidentialite.html',
+  './assets/config.js', './assets/pronoclair-192.png','./assets/pronoclair-512.png',
+  ...['design.css','experience.css','studio.css','app.js','refresh.js','manifest.webmanifest','pronoclair.svg'].map(p=>'./assets/'+p+'?v='+V)
 ];
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE)
-    .then((c) => Promise.all(COQUILLE.map((u) =>
-      c.add(u).catch(() => null))))   // tolérant : jamais d'échec global
-    .then(() => self.skipWaiting()));
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(cache => Promise.all(COQUILLE.map(async url => {
+    try { const response = await fetch(new Request(url,{cache:'reload'})); if(response.ok) await cache.put(url,response); } catch (_) {}
+  }))).then(()=>self.skipWaiting()));
 });
-self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(
-    ks.filter((k) => k.startsWith("vitrine-") && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('vitrine-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
-self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET") return;
-  const url = new URL(e.request.url);
-  if (url.origin !== location.origin) return;           // CDNs : réseau direct
-  const estNavig = e.request.mode === "navigate";
-  const estScript = /\.(js|css|json|webmanifest)(\?|$)/.test(url.pathname);
-  if (estNavig || estScript) {
-    /* network-first : toujours la dernière version, cache seulement en secours */
-    e.respondWith(fetch(e.request)
-      .then((r) => {
-        if (r.ok) caches.open(CACHE).then((c) => c.put(e.request, r.clone()));
-        return r;
-      })
-      .catch(() => caches.match(e.request).then((r) =>
-        r || (estNavig ? caches.match("./index.html") : null))));
-    return;
-  }
-  e.respondWith(caches.match(e.request).then((r) => r ||
-    fetch(e.request).then((rep) => {
-      if (rep.ok) caches.open(CACHE).then((c) => c.put(e.request, rep.clone()));
-      return rep;
-    })));
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  if(event.request.method!=='GET'||url.origin!==self.location.origin||!url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
+  // Network first also applies to logos: old cache-first image entries caused mixed branding.
+  event.respondWith((async()=>{
+    const cache = await caches.open(CACHE);
+    try {
+      const response = await fetch(event.request,{cache:'no-cache'});
+      if(response.ok) await cache.put(event.request,response.clone());
+      return response;
+    } catch (_) {
+      const saved = await cache.match(event.request);
+      if(saved) return saved;
+      if(event.request.mode==='navigate') return await cache.match('./index.html') || new Response('Connexion indisponible',{status:503});
+      return new Response('',{status:503});
+    }
+  })());
 });
